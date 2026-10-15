@@ -328,10 +328,17 @@ function shimmer(){
     o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.07,n+.02);
     g.gain.exponentialRampToValueAtTime(.0001,n+1.2);o.connect(g).connect(actx.destination);o.start(n);o.stop(n+1.3)});
 }
+function wake(){   // the phone may stop audio while the app sleeps; restart it on the next touch
+  if(!soundOn)return;
+  if(!actx||actx.state==='closed'){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(_){return}}
+  if(actx.state!=='running')actx.resume().catch(()=>{});
+}
+addEventListener('pointerdown',wake,true);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake()});
 $('sound').onclick=e=>{
   e.stopPropagation();soundOn=!soundOn;
   if(soundOn&&!actx){try{actx=new (window.AudioContext||window.webkitAudioContext)()}catch(_){}}
-  if(actx&&actx.state==='suspended')actx.resume();
+  if(actx&&actx.state!=='running')actx.resume().catch(()=>{});
   $('sound').textContent=soundOn?'音 オン':'音 オフ';
 };
 $('pause').onclick=e=>{
