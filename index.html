@@ -61,7 +61,7 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 <div class="hud">
   <div class="count"><span class="num" id="score">0</span><span class="lbl">はじけた泡</span><span class="nx" id="nx">つぎのできごとまで 50</span></div>
   <div class="side">
-    <div class="depth">水深 <b id="depth">2</b> m<br><span id="best">きろく 0</span><br><span id="zukan">であった生き物 0 / 8</span></div>
+    <div class="depth">水深 <b id="depth">2</b> m<br><span id="best">きろく 0</span><br><span id="zukan">であった生き物 0 / 11</span></div>
     <div class="meter" aria-hidden="true"><i id="bar"></i></div>
     <div class="btns">
       <button class="btn" id="sound" type="button">音 オフ</button>
@@ -112,7 +112,7 @@ const CREA=[
  {id:'ryugu',name:'リュウグウノツカイ',from:6,note:'めったに会えない、銀色の長い魚'}
 ];
 /* creatures met only during the milestone events */
-const EXTRA=['kujira','yakochu','ebi','ika'];
+const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri'];
 const ZTOTAL=CREA.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
 let cr=null,crT=5,pops=[];
@@ -354,16 +354,16 @@ $('pause').onclick=e=>{
    the next round number at least 20 points away.
    ===================================================================== */
 const MS=50;
-const SEQ=['whale','vent','glow','squid','vent','treasure'];
-const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱'};
+const SEQ=['whale','vent','deme','glow','lily','squid','vent','treasure'];
+const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱',deme:'デメニギス',lily:'ウミユリの森'};
 let shrimps=[],plume=[],plank=[],whale=null;
 function ease(x){x=Math.max(0,Math.min(1,x));return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
 
 function startEvent(kind){
-  evt={kind,t:0,n:0,len:{vent:24,squid:20,treasure:22}[kind]||16,arrived:false,ending:false,hp:0,shown:-1};
+  evt={kind,t:0,n:0,len:{vent:24,squid:20,treasure:22,deme:20,lily:26}[kind]||16,arrived:false,ending:false,hp:0,shown:-1};
   const ev=$('ev');ev.classList.toggle('hot',kind==='vent'||kind==='treasure');
   $('evName').textContent=NAMES[kind];
-  const LB={vent:['エビ','ぴき'],squid:['タッチ','回'],treasure:['たから','こ']}[kind]||['泡','こ'];
+  const LB={vent:['エビ','ぴき'],squid:['タッチ','回'],treasure:['たから','こ'],lily:['タッチ','回']}[kind]||['泡','こ'];
   $('evLbl').textContent=LB[0];$('evU').textContent=LB[1];
   $('evn').textContent=0;ev.hidden=false;
   if(kind==='vent'){
@@ -377,6 +377,12 @@ function startEvent(kind){
   }else if(kind==='squid'){
     startSquid();const first=meet('ika');bwoon();
     showToast('<b>巨大イカの影'+(first?'<br>はじめまして！':'')+'</b>深みから大きな影が…。のびてくる腕にふれると、するっと引っこみます',3600);
+  }else if(kind==='deme'){
+    startDeme();const first=meet('deme');bwoon();
+    showToast('<b>デメニギス'+(first?'<br>はじめまして！':'')+'</b>頭がすき通った魚。中の緑の目で、泡をじっと追いかけます。頭にふれてみて',3600);
+  }else if(kind==='lily'){
+    startLily();rumble();const first=meet('umiyuri');
+    showToast('<b>ウミユリの森'+(first?'<br>はじめまして！':'')+'</b>草のように見えて、じつは動物。ふれると腕をとじて、3回ふれると泳ぎだします',3200);
   }else if(kind==='treasure'){
     startTreasure();
     showToast('<b>海底の宝箱</b>宝箱が沈んできました。'+NEED+' 回たたくと、ひらきます',3200);
@@ -387,12 +393,14 @@ function startEvent(kind){
   update();
 }
 function endEvent(){
-  const k=evt.kind,n=evt.n;evt=null;whale=null;squid=null;chest=null;
+  const k=evt.kind,n=evt.n;evt=null;whale=null;squid=null;chest=null;deme=null;lilies=[];swimmers=[];
   $('ev').hidden=true;nextAt=Math.ceil((score+20)/MS)*MS;spawnT=.4;
   for(const s of shrimps)if(s.mode!=='flip')flee(s);
   const msg={whale:'<b>'+n+' こ</b>クジラの泡をはじきました',glow:'<b>'+n+' こ</b>光る泡をはじきました',
     squid:'<b>'+n+' 回</b>イカの腕にふれました。影はゆっくり深みへ',
-    treasure:'<b>たから '+n+' こ</b>これまでに集めたたから '+takara+' こ'}[k];
+    treasure:'<b>たから '+n+' こ</b>これまでに集めたたから '+takara+' こ',
+    deme:'<b>'+n+' こ</b>デメニギスといっしょに泡をはじきました。緑の目で、ずっと見ていました',
+    lily:'<b>'+n+' 回</b>ウミユリにふれました。森はまた静かに揺れています'}[k];
   if(msg)showToast(msg,3000);
   happy();update();
 }
@@ -406,6 +414,8 @@ function stepEvent(dt){
   else if(evt.kind==='whale')stepWhale(dt);
   else if(evt.kind==='squid')stepSquid(dt);
   else if(evt.kind==='treasure')stepTreasure(dt);
+  else if(evt.kind==='deme')stepDeme(dt);
+  else if(evt.kind==='lily')stepLily(dt);
   else stepGlow(dt);
   if(evt&&evt.t>=evt.len)endEvent();
 }
@@ -858,6 +868,224 @@ function ping(type){
   o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.45);
 }
 
+
+/* ---- デメニギス: a barreleye with a see-through head; its green eyes follow the bubbles ---- */
+let deme=null;
+function startDeme(){
+  const L=Math.min(W*.8,400),dir=Math.random()<.5?1:-1;
+  deme={L,h:L*.2,dir,x:dir>0?-L*.6:W+L*.6,y:H*.5,v:(W+L*1.2)/4.2,ang:-.3,cd:0,look:0};
+}
+function demeEye(){const d=deme;return[d.x+d.dir*d.L*.2,d.y-d.h*.35]}
+function stepDeme(dt){
+  const d=deme;if(!d)return;const e=evt;
+  const fast=(W+d.L*1.2)/4.2,slow=W*.025,rem=(W*.5-d.dir*W*.06-d.x)*d.dir;
+  const vt=e.t>e.len-4.5?fast:Math.max(slow,Math.min(fast,rem*1.1));
+  d.v+=(vt-d.v)*Math.min(1,dt*3);d.x+=d.dir*d.v*dt;
+  d.cd-=dt;if(d.look>0)d.look-=dt;
+  // the green eyes follow the nearest bubble (or roll straight up after a touch)
+  const [ex,ey]=demeEye();let best=1e9,tgt=-.25;
+  if(d.look>0)tgt=-Math.PI/2;
+  else for(const b of bubbles){const dx=b.x-ex,dy=b.y-ey,q=dx*dx+dy*dy;
+    if(q<best){best=q;tgt=Math.atan2(dy,dx*d.dir)}}
+  tgt=Math.max(-1.75,Math.min(.35,tgt));
+  d.ang+=(tgt-d.ang)*Math.min(1,dt*4);
+}
+function hitDeme(px,py){
+  const d=deme;if(!d||!evt||evt.kind!=='deme')return false;
+  const dx=(px-d.x)/(d.L*.5+10),dy=(py-(d.y-d.h*.3))/(d.h*1.3+10);
+  if(dx*dx+dy*dy>1)return false;
+  if(d.cd<=0){
+    d.cd=.8;d.look=1.4;peek();
+    const [ex,ey]=demeEye();
+    for(let i=0;i<5;i++){const r=9+Math.random()*8;
+      bubbles.push({x:ex+(Math.random()-.5)*d.L*.15,y:ey-d.h*.8,r,sp:90+Math.random()*60,ph:Math.random()*6.28,wf:1.2,wa:16,
+        hue:110+Math.random()*40,pearl:false,glow:true,born:.2})}
+    pops.push({x:ex,y:ey-d.h*1.1,life:1,txt:'きょろっ',col:'#a8ffbe'});
+  }
+  return true;
+}
+function peek(){
+  if(!soundOn||!actx)return;
+  [659.25,987.77].forEach((f,i)=>{const n=actx.currentTime+i*.08,o=actx.createOscillator(),g=actx.createGain();
+    o.type='sine';o.frequency.setValueAtTime(f,n);o.frequency.exponentialRampToValueAtTime(f*1.25,n+.1);
+    g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.1,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+.3);
+    o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.35)});
+}
+function drawDeme(t){
+  const d=deme;if(!d||!evt)return;
+  const L=d.L,h=d.h,a=Math.max(0,Math.min(1,evt.t/1.2,(evt.len-evt.t)/1.2));
+  cx.save();cx.globalAlpha=a;cx.translate(d.x,d.y+Math.sin(t*.9)*7);cx.scale(d.dir,1);
+  const halo=cx.createRadialGradient(0,-h*.3,0,0,-h*.3,L*.6);halo.addColorStop(0,'rgba(170,255,210,.12)');halo.addColorStop(1,'rgba(170,255,210,0)');
+  cx.fillStyle=halo;cx.beginPath();cx.ellipse(0,-h*.3,L*.62,h*2.2,0,0,TAU);cx.fill();
+  // tail
+  const sw=Math.sin(t*2.4)*h*.18;
+  cx.fillStyle='rgba(120,100,85,.75)';cx.beginPath();cx.moveTo(-L*.44,0);
+  cx.quadraticCurveTo(-L*.52,-h*.2+sw,-L*.6,-h*.5+sw);cx.quadraticCurveTo(-L*.55,sw,-L*.6,h*.5+sw);
+  cx.quadraticCurveTo(-L*.52,h*.2+sw,-L*.44,0);cx.fill();
+  // big see-through fins
+  const fl=Math.sin(t*1.8)*.25;
+  cx.fillStyle='rgba(200,235,240,.18)';cx.strokeStyle='rgba(220,250,255,.35)';cx.lineWidth=1;
+  for(const k of[0,1]){cx.save();cx.translate(L*(.05-k*.22),h*.3);cx.rotate(.5+fl*(k?-1:1));
+    cx.beginPath();cx.moveTo(0,0);cx.quadraticCurveTo(-L*.14,h*.25,-L*.2,h*.75);cx.quadraticCurveTo(-L*.04,h*.6,0,0);cx.fill();cx.stroke();cx.restore()}
+  // body
+  const body=()=>{cx.beginPath();cx.moveTo(L*.45,h*.02);
+    cx.bezierCurveTo(L*.44,-h*.3,L*.3,-h*.42,L*.05,-h*.4);
+    cx.bezierCurveTo(-L*.2,-h*.36,-L*.4,-h*.18,-L*.47,0);
+    cx.bezierCurveTo(-L*.4,h*.2,-L*.2,h*.42,L*.05,h*.42);
+    cx.bezierCurveTo(L*.3,h*.42,L*.44,h*.3,L*.45,h*.02);cx.closePath()};
+  const bg=cx.createLinearGradient(0,-h*.45,0,h*.45);bg.addColorStop(0,'#5a4a3e');bg.addColorStop(.6,'#3a3029');bg.addColorStop(1,'#8c96a0');
+  cx.fillStyle=bg;body();cx.fill();
+  cx.save();body();cx.clip();
+  cx.strokeStyle='rgba(230,220,200,.12)';cx.lineWidth=1;
+  for(let i=0;i<9;i++){const x=-L*.35+i*L*.08;cx.beginPath();cx.arc(x,0,h*.3,-1,1);cx.stroke()}
+  cx.restore();
+  // nostrils that look like eyes, and a tiny mouth
+  cx.fillStyle='#120c0a';
+  cx.beginPath();cx.ellipse(L*.37,-h*.12,h*.06,h*.045,0,0,TAU);cx.fill();
+  cx.beginPath();cx.ellipse(L*.32,-h*.14,h*.05,h*.04,0,0,TAU);cx.fill();
+  cx.strokeStyle='rgba(20,12,10,.8)';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(L*.45,h*.05);cx.lineTo(L*.41,h*.08);cx.stroke();
+  // the transparent dome over the head
+  const hx=L*.22,hy=-h*.45,rx=L*.2,ry=h*.64;
+  const dg=cx.createRadialGradient(hx-rx*.2,hy-ry*.3,0,hx,hy,Math.max(rx,ry));
+  dg.addColorStop(0,'rgba(200,250,255,.05)');dg.addColorStop(.75,'rgba(190,245,255,.10)');dg.addColorStop(1,'rgba(200,250,255,.28)');
+  cx.fillStyle=dg;cx.beginPath();cx.ellipse(hx,hy,rx,ry,0,0,TAU);cx.fill();
+  // green barrel eyes inside
+  const eyeOne=(ox,al)=>{cx.save();cx.globalAlpha=a*al;cx.translate(L*.2+ox,-h*.35);cx.rotate(d.ang);
+    const len=h*.5,w=h*.2;
+    const eg=cx.createLinearGradient(0,-w/2,0,w/2);eg.addColorStop(0,'#3f8a5c');eg.addColorStop(1,'#1c4a32');
+    cx.fillStyle=eg;cx.beginPath();cx.moveTo(0,-w*.35);cx.lineTo(len,-w/2);cx.lineTo(len,w/2);cx.lineTo(0,w*.35);cx.closePath();cx.fill();
+    cx.shadowColor='#7dff9a';cx.shadowBlur=18+Math.sin(t*3)*6;
+    cx.fillStyle='#8dffaa';cx.beginPath();cx.arc(len,0,w*.55,0,TAU);cx.fill();
+    cx.shadowBlur=0;cx.fillStyle='rgba(255,255,255,.8)';cx.beginPath();cx.arc(len+w*.12,-w*.2,w*.16,0,TAU);cx.fill();
+    cx.restore()};
+  eyeOne(-L*.035,.55);eyeOne(0,1);
+  cx.strokeStyle='rgba(220,252,255,.55)';cx.lineWidth=1.5;cx.beginPath();cx.ellipse(hx,hy,rx,ry,0,0,TAU);cx.stroke();
+  cx.strokeStyle='rgba(255,255,255,.55)';cx.lineWidth=2.5;cx.lineCap='round';
+  cx.beginPath();cx.ellipse(hx,hy,rx*.82,ry*.82,0,-2.6,-1.9);cx.stroke();
+  cx.restore();
+}
+
+/* ---- ウミユリの森: white sea lilies sway on the floor; touch to close them, and they may swim away ---- */
+let lilies=[],swimmers=[];
+function floorY(x){return H*.88-Math.sin(x/W*Math.PI*2+.6)*H*.025}
+function newLily(x,delay){
+  const s=Math.max(.8,Math.min(1.25,Math.min(W,H)/440));
+  return{x,hh:H*(.16+Math.random()*.2),R:(32+Math.random()*16)*s,ph:Math.random()*6,o:1,ot:1,taps:0,reopen:0,cd:0,
+    g:-(delay||0),hue:25+Math.random()*25,tx:0,ty:0}
+}
+function startLily(){
+  const n=W<500?6:8;lilies=[];swimmers=[];
+  for(let i=0;i<n;i++)lilies.push(newLily(W*(i+.5)/n+(Math.random()-.5)*W/n*.45,.6+i*.25+Math.random()*.3));
+  evt.auto=7;
+}
+function lilyTop(l,t){
+  const fy=floorY(l.x),gg=Math.max(0,Math.min(1,l.g)),hh=l.hh*gg,sway=Math.sin(t*.9+l.ph)*hh*.13;
+  return{fx:l.x,fy,hh,sway,x:l.x+sway,y:fy-hh,tilt:sway/(l.hh+1)*.9};
+}
+function releaseLily(i,t){
+  const l=lilies[i],p=lilyTop(l,t);
+  swimmers.push({x:p.x,y:p.y-l.R*.4,R:l.R,hue:l.hue,ph:l.ph,st:Math.PI,vx:(Math.random()-.5)*20,vy:-30,cd:0,o:.5});
+  pops.push({x:p.x,y:p.y-l.R*1.3,life:1,txt:'すいー',col:'#fff2e6'});
+  lilies[i]=newLily(l.x,1.2);
+  chime(1046.5);
+}
+function stepLily(dt){
+  const e=evt,t=performance.now()/1000;
+  for(const l of lilies){
+    l.g+=dt*.55;l.cd-=dt;
+    if(l.ot===0){l.reopen-=dt;if(l.reopen<=0)l.ot=1}
+    l.o+=(l.ot-l.o)*Math.min(1,dt*(l.ot<l.o?10:2.2));
+  }
+  e.auto-=dt;
+  if(e.auto<=0&&e.t<e.len-5){e.auto=5+Math.random()*4;
+    const ok=lilies.map((l,i)=>l.g>=1?i:-1).filter(i=>i>=0);
+    if(ok.length)releaseLily(ok[Math.floor(Math.random()*ok.length)],t)}
+}
+function stepSwimmers(dt){
+  for(let i=swimmers.length-1;i>=0;i--){const s=swimmers[i];
+    s.st+=dt*2.6;s.cd-=dt;s.ph+=dt;
+    const pull=Math.max(0,Math.sin(s.st));        // arms sweep down -> lily goes up
+    s.o=.55+.45*Math.cos(s.st);
+    s.vy+=(-(25+70*pull)-s.vy)*Math.min(1,dt*3);
+    s.x+=(s.vx+Math.sin(s.ph*1.3)*18)*dt;s.y+=s.vy*dt;
+    if(s.y<-s.R*3)swimmers.splice(i,1)}
+}
+function hitLily(px,py){
+  if(!evt||evt.kind!=='lily')return false;
+  const t=performance.now()/1000;
+  for(const s of swimmers){const dx=px-s.x,dy=py-s.y;
+    if(dx*dx+dy*dy<=(s.R+16)**2){
+      if(s.cd<=0){s.cd=.5;s.vy-=110;s.st=Math.PI*.5;score+=2;evt.n++;$('evn').textContent=evt.n;chime(880);
+        pops.push({x:s.x,y:s.y-s.R,life:.9,txt:'ふわっ',col:'#fff2e6'});update()}
+      return true}}
+  for(let i=0;i<lilies.length;i++){const l=lilies[i];if(l.g<.7)continue;
+    const p=lilyTop(l,t),cxp=p.x,cyp=p.y-l.R*.45,dx=px-cxp,dy=py-cyp;
+    if(dx*dx+dy*dy<=(l.R*.85+16)**2){
+      if(l.cd>0)return true;
+      l.cd=.3;l.ot=0;l.reopen=1.6;l.taps++;score+=2;evt.n++;$('evn').textContent=evt.n;
+      for(let k=0;k<8;k++){const a=Math.random()*TAU,v=30+Math.random()*60;
+        bits.push({x:cxp,y:cyp,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:1+Math.random()*1.8,life:.8,col:'#fff2e6'})}
+      if(l.taps>=3){score+=3;releaseLily(i,t);pops.push({x:cxp,y:cyp-l.R,life:1,txt:'+5',col:'#fff2e6'})}
+      else{chime(659.25);pops.push({x:cxp,y:cyp-l.R*.9,life:.8,txt:'きゅっ',col:'#fff2e6'})}
+      update();return true}
+  }
+  return false;
+}
+function chime(f){
+  if(!soundOn||!actx)return;
+  const n=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(f,n);o.frequency.exponentialRampToValueAtTime(f*.75,n+.25);
+  g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.1,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+.45);
+  o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.5);
+}
+function drawCrown(x,y,R,o,tilt,t,ph,hue){
+  cx.save();cx.translate(x,y);cx.rotate(tilt);
+  const arm=`hsla(${hue},45%,90%,.95)`,pin=`hsla(${hue},40%,86%,.6)`;
+  cx.lineCap='round';
+  for(let k=0;k<8;k++){
+    const side=(k-3.5)/3.5,a0=-Math.PI/2+side*(.18+1.1*o),len=R*(.9+.1*Math.sin(k*1.7));
+    let ax=0,ay=0,pts=[[0,0,a0]];
+    for(let j=1;j<=10;j++){const f=j/10,ang=a0+Math.sign(side||.1)*(o*.75-(1-o)*1.1)*f*f+Math.sin(t*1.5+ph+k*.9)*.08*f;
+      ax+=Math.cos(ang)*len/10;ay+=Math.sin(ang)*len/10;pts.push([ax,ay,ang])}
+    // the little side branches make the arm look like a row of ribs
+    cx.strokeStyle=pin;cx.lineWidth=Math.max(1,R*.025);cx.beginPath();
+    for(let j=2;j<=10;j++){const [qx,qy,ang]=pts[j],pl=R*.14*(1-j/10*.5)*(.35+.65*o);
+      for(const sd of[-1,1]){const pa=ang+sd*(1.25-(1-o)*.6);cx.moveTo(qx,qy);cx.lineTo(qx+Math.cos(pa)*pl,qy+Math.sin(pa)*pl)}}
+    cx.stroke();
+    cx.strokeStyle=arm;cx.lineWidth=Math.max(1.5,R*.06);cx.beginPath();
+    pts.forEach(([qx,qy],j)=>j?cx.lineTo(qx,qy):cx.moveTo(qx,qy));cx.stroke();
+  }
+  cx.fillStyle=`hsl(${hue},35%,80%)`;cx.beginPath();cx.ellipse(0,R*.02,R*.13,R*.1,0,0,TAU);cx.fill();
+  cx.restore();
+}
+function drawLily(t){
+  if(!evt||evt.kind!=='lily')return;
+  const e=evt,a=Math.max(0,Math.min(1,e.t/1.2,(e.len-e.t)/1.5));if(a<=0)return;
+  cx.save();cx.globalAlpha=a;
+  cx.fillStyle='rgba(0,6,16,.35)';cx.fillRect(0,0,W,H);
+  const fg=cx.createLinearGradient(0,H*.83,0,H);fg.addColorStop(0,'#2c3a44');fg.addColorStop(1,'#0b1117');
+  cx.fillStyle=fg;cx.beginPath();cx.moveTo(0,H);
+  for(let x=0;x<=W+10;x+=10)cx.lineTo(x,floorY(x));
+  cx.lineTo(W,H);cx.closePath();cx.fill();
+  cx.fillStyle='rgba(200,215,225,.18)';
+  for(let i=0;i<22;i++){const x=(i*131.7%1000)/1000*W;cx.beginPath();cx.ellipse(x,floorY(x)+6+(i*7%11),3+(i%3)*2,1.5,0,0,TAU);cx.fill()}
+  for(const l of lilies){if(l.g<=0)continue;
+    const p=lilyTop(l,t),gg=Math.min(1,l.g);
+    // stalk with little whorls along it
+    cx.strokeStyle=`hsla(${l.hue},25%,78%,.9)`;cx.lineWidth=Math.max(1.5,l.R*.08);cx.lineCap='round';
+    const qx=p.fx+p.sway*.25,qy=p.fy-p.hh*.55;
+    cx.beginPath();cx.moveTo(p.fx,p.fy);cx.quadraticCurveTo(qx,qy,p.x,p.y);cx.stroke();
+    cx.strokeStyle=`hsla(${l.hue},30%,82%,.55)`;cx.lineWidth=1;cx.beginPath();
+    const N=Math.max(2,Math.floor(p.hh/16));
+    for(let k=1;k<N;k++){const f=k/N,x=(1-f)*(1-f)*p.fx+2*(1-f)*f*qx+f*f*p.x,y=(1-f)*(1-f)*p.fy+2*(1-f)*f*qy+f*f*p.y,c=l.R*.14;
+      cx.moveTo(x,y);cx.quadraticCurveTo(x-c,y-c*.2,x-c*1.1,y+c*.5);cx.moveTo(x,y);cx.quadraticCurveTo(x+c,y-c*.2,x+c*1.1,y+c*.5)}
+    cx.stroke();
+    drawCrown(p.x,p.y,l.R*gg,l.o,p.tilt,t,l.ph,l.hue);
+  }
+  for(const s of swimmers)drawCrown(s.x,s.y,s.R,s.o,Math.sin(s.ph)*.15,t,s.ph,s.hue);
+  cx.restore();
+}
+
 /* ---- tapping ---- */
 let lastLevel=0,hintGone=false;
 function hit(px,py){
@@ -868,12 +1096,13 @@ function hit(px,py){
   if(hitSquid(px,py))return;
   if(hitLoot(px,py))return;
   if(hitChest(px,py))return;
+  if(hitLily(px,py))return;
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i],dx=px-b.x,dy=py-b.y;
     if(dx*dx+dy*dy<=(b.r+10)**2){
       burst(b);bubbles.splice(i,1);pop(b.pearl||b.glow);
       score+=b.pearl?5:b.glow?2:1;
-      if(evt&&(evt.kind==='whale'||(evt.kind==='glow'&&b.glow))){evt.n++;$('evn').textContent=evt.n}
+      if(evt&&(evt.kind==='whale'||evt.kind==='deme'||(evt.kind==='glow'&&b.glow))){evt.n++;$('evn').textContent=evt.n}
       update();
       if(!hintGone){hintGone=true;$('hint').style.opacity=0}
       return;
@@ -881,6 +1110,7 @@ function hit(px,py){
   }
   if(hitChimney(px,py))return;
   if(hitWhale(px,py))return;
+  if(hitDeme(px,py))return;
 }
 cv.addEventListener('pointerdown',e=>hit(e.clientX,e.clientY));
 
@@ -965,7 +1195,7 @@ function frame(now){
   const c=cfg(),t=now/1000;
   stepEvent(dt);
   spawnT-=dt;
-  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid')){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
+  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily')){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
   for(const m of motes){m.y-=m.v*dt;if(m.y<0)m.y+=1}
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i];b.born=Math.min(1,b.born+dt*2.5);
@@ -977,14 +1207,14 @@ function frame(now){
     if(!p.ring){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.94;p.vy=p.vy*.94-30*dt}
     if(p.life<=0)bits.splice(i,1);
   }
-  stepShrimps(dt);stepPlume(dt);stepPlank(dt);stepInk(dt);stepLoot(dt);
+  stepShrimps(dt);stepSwimmers(dt);stepPlume(dt);stepPlank(dt);stepInk(dt);stepLoot(dt);
   water();
   drawVent(t);drawPlume();
   drawSquidBody(t);
-  drawWhale(t);
+  drawWhale(t);drawDeme(t);
   stepCreature(dt);drawCreature(t);
   drawGlow();
-  drawTreasure(t);drawTents(t);
+  drawTreasure(t);drawLily(t);drawTents(t);
   for(const b of bubbles)drawBubble(b);
   for(const s of shrimps)drawShrimp(s);
   drawLoot();drawInk();
