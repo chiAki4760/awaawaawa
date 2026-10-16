@@ -61,7 +61,7 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 <div class="hud">
   <div class="count"><span class="num" id="score">0</span><span class="lbl">はじけた泡</span><span class="nx" id="nx">つぎのできごとまで 50</span></div>
   <div class="side">
-    <div class="depth">水深 <b id="depth">2</b> m<br><span id="best">きろく 0</span><br><span id="zukan">であった生き物 0 / 11</span></div>
+    <div class="depth">水深 <b id="depth">2</b> m<br><span id="best">きろく 0</span><br><span id="zukan">であった生き物 0 / 13</span></div>
     <div class="meter" aria-hidden="true"><i id="bar"></i></div>
     <div class="btns">
       <button class="btn" id="sound" type="button">音 オフ</button>
@@ -112,7 +112,7 @@ const CREA=[
  {id:'ryugu',name:'リュウグウノツカイ',from:6,note:'めったに会えない、銀色の長い魚'}
 ];
 /* creatures met only during the milestone events */
-const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri'];
+const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya'];
 const ZTOTAL=CREA.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
 let cr=null,crT=5,pops=[];
@@ -354,16 +354,16 @@ $('pause').onclick=e=>{
    the next round number at least 20 points away.
    ===================================================================== */
 const MS=50;
-const SEQ=['whale','vent','deme','glow','lily','squid','vent','treasure'];
-const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱',deme:'デメニギス',lily:'ウミユリの森'};
+const SEQ=['whale','vent','deme','glow','blob','lily','squid','hoya','vent','treasure'];
+const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱',deme:'デメニギス',lily:'ウミユリの森',blob:'ブロブフィッシュ',hoya:'オオグチボヤ'};
 let shrimps=[],plume=[],plank=[],whale=null;
 function ease(x){x=Math.max(0,Math.min(1,x));return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
 
 function startEvent(kind){
-  evt={kind,t:0,n:0,len:{vent:24,squid:20,treasure:22,deme:20,lily:26}[kind]||16,arrived:false,ending:false,hp:0,shown:-1};
+  evt={kind,t:0,n:0,len:{vent:24,squid:20,treasure:22,deme:20,lily:26,blob:20,hoya:24}[kind]||16,arrived:false,ending:false,hp:0,shown:-1};
   const ev=$('ev');ev.classList.toggle('hot',kind==='vent'||kind==='treasure');
   $('evName').textContent=NAMES[kind];
-  const LB={vent:['エビ','ぴき'],squid:['タッチ','回'],treasure:['たから','こ'],lily:['タッチ','回']}[kind]||['泡','こ'];
+  const LB={vent:['エビ','ぴき'],squid:['タッチ','回'],treasure:['たから','こ'],lily:['タッチ','回'],blob:['つんつん','回'],hoya:['えさ','こ']}[kind]||['泡','こ'];
   $('evLbl').textContent=LB[0];$('evU').textContent=LB[1];
   $('evn').textContent=0;ev.hidden=false;
   if(kind==='vent'){
@@ -383,6 +383,12 @@ function startEvent(kind){
   }else if(kind==='lily'){
     startLily();rumble();const first=meet('umiyuri');
     showToast('<b>ウミユリの森'+(first?'<br>はじめまして！':'')+'</b>草のように見えて、じつは動物。ふれると腕をとじて、3回ふれると泳ぎだします',3200);
+  }else if(kind==='blob'){
+    startBlob();const first=meet('blob');bwoon();
+    showToast('<b>ブロブフィッシュ'+(first?'<br>はじめまして！':'')+'</b>深い海の底で、ぷるぷる暮らすゼリーみたいな魚。つついてみて。すばやく 4 回つつくと…？',3600);
+  }else if(kind==='hoya'){
+    startHoya();const first=meet('hoya');rumble();
+    showToast('<b>オオグチボヤ'+(first?'<br>はじめまして！':'')+'</b>大きな口をあけて、えさを待つホヤ。ただようえさにふれると、口のほうへ泳いでいきます',3600);
   }else if(kind==='treasure'){
     startTreasure();
     showToast('<b>海底の宝箱</b>宝箱が沈んできました。'+NEED+' 回たたくと、ひらきます',3200);
@@ -393,14 +399,16 @@ function startEvent(kind){
   update();
 }
 function endEvent(){
-  const k=evt.kind,n=evt.n;evt=null;whale=null;squid=null;chest=null;deme=null;lilies=[];swimmers=[];
+  const k=evt.kind,n=evt.n;evt=null;whale=null;squid=null;chest=null;deme=null;lilies=[];swimmers=[];blob=null;hoyas=[];hfood=[];
   $('ev').hidden=true;nextAt=Math.ceil((score+20)/MS)*MS;spawnT=.4;
   for(const s of shrimps)if(s.mode!=='flip')flee(s);
   const msg={whale:'<b>'+n+' こ</b>クジラの泡をはじきました',glow:'<b>'+n+' こ</b>光る泡をはじきました',
     squid:'<b>'+n+' 回</b>イカの腕にふれました。影はゆっくり深みへ',
     treasure:'<b>たから '+n+' こ</b>これまでに集めたたから '+takara+' こ',
     deme:'<b>'+n+' こ</b>デメニギスといっしょに泡をはじきました。緑の目で、ずっと見ていました',
-    lily:'<b>'+n+' 回</b>ウミユリにふれました。森はまた静かに揺れています'}[k];
+    lily:'<b>'+n+' 回</b>ウミユリにふれました。森はまた静かに揺れています',
+    blob:'<b>'+n+' 回</b>ブロブフィッシュをつつきました。むすっとした顔のまま、ちょっと楽しそうでした',
+    hoya:'<b>えさ '+n+' こ</b>オオグチボヤが食べました。おなかいっぱいで、口をとじて休んでいます'}[k];
   if(msg)showToast(msg,3000);
   happy();update();
 }
@@ -416,6 +424,8 @@ function stepEvent(dt){
   else if(evt.kind==='treasure')stepTreasure(dt);
   else if(evt.kind==='deme')stepDeme(dt);
   else if(evt.kind==='lily')stepLily(dt);
+  else if(evt.kind==='blob')stepBlob(dt);
+  else if(evt.kind==='hoya')stepHoya(dt);
   else stepGlow(dt);
   if(evt&&evt.t>=evt.len)endEvent();
 }
@@ -1230,6 +1240,233 @@ function drawLily(t){
   cx.restore();
 }
 
+/* ---- ブロブフィッシュ: a droopy jelly fish sits on the floor; poke it, and poke it fast to make it smile ---- */
+let blob=null;
+function startBlob(){
+  const S=Math.max(60,Math.min(W*.22,110));
+  blob={S,x:W*(.4+Math.random()*.2),y:-S,tx:W*.5,land:0,sq:0,sv:0,combo:0,comboT:0,smile:0,ouch:0,cd:0,sigh:3,blink:3,dir:Math.random()<.5?1:-1};
+}
+function blobBase(){return floorY(blob.x)-H*.12+Math.sin(performance.now()/900)*4}
+function blobBubble(b,n,pink){
+  const mx=b.x+b.dir*b.S*.8,my=b.y-b.S*.4;
+  for(let i=0;i<n;i++){const r=pink?9+Math.random()*7:7+Math.random()*6;
+    bubbles.push({x:mx+(Math.random()-.5)*b.S*.3,y:my-Math.random()*10,r,sp:60+Math.random()*50,ph:Math.random()*6.28,wf:1.1,wa:14,
+      hue:pink?325+Math.random()*25:195+Math.random()*20,pearl:false,glow:pink,born:.2})}
+}
+function stepBlob(dt){
+  const b=blob;if(!b)return;const base=blobBase();
+  if(b.land<1){b.land=Math.min(1,b.land+dt*.45);b.y=-b.S+(base+b.S)*ease(b.land);
+    if(b.land>=1){b.sv=-5;boing()}}
+  else b.y=base;
+  b.sv+=(-60*b.sq-5*b.sv)*dt;b.sq+=b.sv*dt;
+  b.comboT-=dt;if(b.comboT<=0)b.combo=0;
+  if(b.smile>0)b.smile-=dt;if(b.ouch>0)b.ouch-=dt;b.cd-=dt;b.blink-=dt;if(b.blink<-.15)b.blink=2.5+Math.random()*3;
+  if(b.land>=1){
+    if(Math.abs(b.tx-b.x)<4)b.tx=W*(.25+Math.random()*.5);
+    const v=b.tx-b.x;b.x+=Math.sign(v)*Math.min(Math.abs(v),12*dt);
+    if(Math.abs(v)>20)b.dir=Math.sign(v);
+    b.sigh-=dt;if(b.sigh<=0){b.sigh=4+Math.random()*3;blobBubble(b,2,false)}
+  }
+}
+function hitBlob(px,py){
+  const b=blob;if(!b||!evt||evt.kind!=='blob'||b.land<1)return false;
+  const S=b.S,dx=(px-(b.x+b.dir*S*.1))/(S*.95+12),dy=(py-(b.y-S*.45))/(S*.6+12);
+  if(dx*dx+dy*dy>1)return false;
+  if(b.cd>0)return true;
+  b.cd=.12;b.sv=-7-Math.random()*2;b.ouch=.45;score+=1;evt.n++;$('evn').textContent=evt.n;boing();
+  b.combo=b.comboT>0?b.combo+1:1;b.comboT=.9;
+  pops.push({x:px+(Math.random()-.5)*50,y:py-26-Math.random()*20,life:.8,txt:'ぷにっ',col:'#ffc8d4'});
+  if(b.combo>=4){
+    b.combo=0;b.comboT=0;b.smile=2.4;b.ouch=0;score+=5;happy();blobBubble(b,7,true);
+    pops.push({x:b.x,y:b.y-S*1.2,life:1.1,txt:'にこっ +5',col:'#ffd6e2'});
+  }
+  update();return true;
+}
+function seaFloor(dark){
+  cx.fillStyle=`rgba(0,6,16,${dark})`;cx.fillRect(0,0,W,H);
+  const fg=cx.createLinearGradient(0,H*.83,0,H);fg.addColorStop(0,'#2c3a44');fg.addColorStop(1,'#0b1117');
+  cx.fillStyle=fg;cx.beginPath();cx.moveTo(0,H);
+  for(let x=0;x<=W+10;x+=10)cx.lineTo(x,floorY(x));
+  cx.lineTo(W,H);cx.closePath();cx.fill();
+  cx.fillStyle='rgba(200,215,225,.18)';
+  for(let i=0;i<22;i++){const x=(i*131.7%1000)/1000*W;cx.beginPath();cx.ellipse(x,floorY(x)+6+(i*7%11),3+(i%3)*2,1.5,0,0,TAU);cx.fill()}
+}
+function drawBlob(t){
+  const b=blob,e=evt;if(!b||!e||e.kind!=='blob')return;
+  const a=Math.max(0,Math.min(1,e.t/1.2,(e.len-e.t)/1.5));if(a<=0)return;
+  cx.save();cx.globalAlpha=a;seaFloor(.3);
+  const S=b.S,q=Math.max(-.4,Math.min(.7,-b.sq));
+  cx.fillStyle='rgba(0,0,0,.28)';cx.beginPath();cx.ellipse(b.x,floorY(b.x)+4,S*.8*(1+q*.3),S*.1,0,0,TAU);cx.fill();
+  cx.translate(b.x,b.y);
+  cx.scale(b.dir*(1+q*.3),(1-q*.35)*(1+Math.sin(t*1.6)*.02));
+  // tail
+  const sw=Math.sin(t*1.5)*S*.06;
+  cx.fillStyle='rgba(225,150,165,.75)';cx.beginPath();cx.moveTo(-S*.55,-S*.32);
+  cx.quadraticCurveTo(-S*.85,-S*.5+sw,-S*1.0,-S*.42+sw);cx.quadraticCurveTo(-S*.9,-S*.22+sw,-S*1.0,-S*.05+sw);
+  cx.quadraticCurveTo(-S*.8,-S*.12,-S*.55,-S*.18);cx.fill();
+  // jelly body and big head
+  const g=cx.createRadialGradient(S*.1,-S*.78,2,S*.05,-S*.45,S*1.0);
+  g.addColorStop(0,'#ffe3e9');g.addColorStop(.55,'#f2aebb');g.addColorStop(1,'#d4808f');
+  cx.fillStyle=g;cx.beginPath();
+  cx.ellipse(-S*.1,-S*.36,S*.62,S*.36,0,0,TAU);cx.moveTo(S*.78,-S*.52);cx.ellipse(S*.28,-S*.52,S*.5,S*.46,0,0,TAU);cx.fill();
+  cx.fillStyle='rgba(215,135,150,.6)';cx.beginPath();cx.ellipse(-S*.08,-S*.24,S*.18,S*.09,.4,0,TAU);cx.fill();
+  // soft wrinkles and a jelly shine
+  cx.strokeStyle='rgba(190,100,120,.3)';cx.lineWidth=Math.max(1,S*.02);cx.lineCap='round';
+  for(let i=0;i<3;i++){cx.beginPath();cx.arc(S*.22,-S*.48+i*S*.07,S*(.32-i*.05),-2.5,-1.2);cx.stroke()}
+  cx.fillStyle='rgba(255,255,255,.35)';cx.beginPath();cx.ellipse(S*.12,-S*.86,S*.2,S*.07,-.2,0,TAU);cx.fill();
+  // eyes
+  const ex=[[S*.22,-S*.66],[S*.46,-S*.7]],er=S*.045;
+  cx.strokeStyle='#3a1620';cx.fillStyle='#3a1620';cx.lineWidth=Math.max(1.5,S*.025);
+  for(const [x,y] of ex){
+    if(b.ouch>0){cx.beginPath();cx.moveTo(x-er,y-er);cx.lineTo(x+er*.6,y);cx.lineTo(x-er,y+er);cx.stroke()}
+    else if(b.smile>0){cx.beginPath();cx.arc(x,y+er*.6,er*1.1,Math.PI*1.15,Math.PI*1.85);cx.stroke()}
+    else if(b.blink<0){cx.beginPath();cx.moveTo(x-er,y);cx.lineTo(x+er,y);cx.stroke()}
+    else{cx.beginPath();cx.arc(x,y,er,0,TAU);cx.fill();
+      cx.fillStyle='rgba(255,255,255,.85)';cx.beginPath();cx.arc(x-er*.35,y-er*.35,er*.35,0,TAU);cx.fill();cx.fillStyle='#3a1620'}
+  }
+  if(b.smile>0){cx.fillStyle='rgba(255,120,150,.45)';cx.beginPath();cx.ellipse(S*.1,-S*.5,S*.08,S*.05,0,0,TAU);cx.fill()}
+  // mouth (grumpy, or a rare smile)
+  cx.strokeStyle='#7a2a3a';cx.lineWidth=Math.max(1.5,S*.025);cx.beginPath();
+  if(b.smile>0){cx.moveTo(S*.18,-S*.12);cx.quadraticCurveTo(S*.3,-S*.02,S*.42,-S*.12)}
+  else{cx.moveTo(S*.18,-S*.06);cx.quadraticCurveTo(S*.3,-S*.15,S*.42,-S*.07)}
+  cx.stroke();
+  // the famous droopy nose
+  const ng=cx.createLinearGradient(0,-S*.62,0,-S*.06);ng.addColorStop(0,'#f2a8b6');ng.addColorStop(1,'#d07688');
+  cx.fillStyle=ng;cx.beginPath();cx.moveTo(S*.38,-S*.62);
+  cx.bezierCurveTo(S*.68,-S*.6,S*.78,-S*.3,S*.66,-S*.16);cx.bezierCurveTo(S*.58,-S*.04,S*.4,-S*.08,S*.4,-S*.22);
+  cx.bezierCurveTo(S*.4,-S*.36,S*.34,-S*.5,S*.38,-S*.62);cx.fill();
+  cx.fillStyle='rgba(255,255,255,.4)';cx.beginPath();cx.ellipse(S*.6,-S*.38,S*.035,S*.07,-.2,0,TAU);cx.fill();
+  cx.restore();
+}
+function boing(){
+  if(!soundOn||!actx)return;
+  const n=actx.currentTime,o=actx.createOscillator(),g=actx.createGain(),l=actx.createOscillator(),lg=actx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(260,n);o.frequency.exponentialRampToValueAtTime(140,n+.25);
+  l.frequency.value=18;lg.gain.value=30;l.connect(lg).connect(o.frequency);
+  g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.16,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+.35);
+  o.connect(g).connect(actx.destination);o.start(n);l.start(n);o.stop(n+.4);l.stop(n+.4);
+}
+
+/* ---- オオグチボヤ: big-mouthed sea squirts wait with open hoods; send drifting food into their mouths ---- */
+let hoyas=[],hfood=[];
+function startHoya(){
+  const n=W<500?3:4,R=Math.max(30,Math.min(56,Math.min(W,H)*.11));hoyas=[];hfood=[];
+  for(let i=0;i<n;i++)hoyas.push({x:W*(i+.5)/n+(Math.random()-.5)*W/n*.3,R,hh:H*(.1+Math.random()*.16),ph:Math.random()*6,
+    o:0,st:'open',tm:1+i*.5+Math.random(),chew:0,cd:0,tilt:(Math.random()-.5)*.3,f:i%2?-1:1,g:-(.3+i*.3)});
+  evt.ft=.5;
+}
+function hoyaTop(h,t){
+  const fy=floorY(h.x),gg=Math.max(0,Math.min(1,h.g)),hh=h.hh*gg,sway=Math.sin(t*.7+h.ph)*hh*.06;
+  return{fx:h.x,fy,hh,x:h.x+sway,y:fy-hh,ang:h.tilt+sway/(h.hh+1)};
+}
+function hoyaMouth(h,t){
+  const p=hoyaTop(h,t),R=h.R,lx=R*.3*h.f,c=Math.cos(p.ang),s=Math.sin(p.ang);
+  return[p.x+c*lx,p.y-R*.45+s*lx];
+}
+function stepHoya(dt){
+  const e=evt,fin=e.t>e.len-3,t=performance.now()/1000;
+  for(const h of hoyas){
+    h.g+=dt*.6;h.cd-=dt;if(h.chew>0)h.chew-=dt;h.tm-=dt;
+    if(fin)h.st='shut';
+    else if(h.g>=1){
+      if(h.st==='open'&&h.tm<=0){h.st='shut';h.tm=1+Math.random()*.8}
+      else if(h.st==='shut'&&h.tm<=0){h.st='open';h.tm=3+Math.random()*3}
+    }
+    const tg=h.g<1?0:h.st==='open'?1:0;h.o+=(tg-h.o)*Math.min(1,dt*(tg<h.o?14:2.2));
+  }
+  e.ft-=dt;
+  if(e.ft<=0&&!fin){e.ft=.5+Math.random()*.6;
+    if(hfood.length<14)hfood.push({x:W*(.05+Math.random()*.9),y:-10,vx:0,vy:32+Math.random()*16,r:3.5+Math.random()*2.5,
+      kind:Math.random()<.4?'ebi':'snow',ph:Math.random()*6,home:null})}
+  for(let i=hfood.length-1;i>=0;i--){const f=hfood[i];f.ph+=dt;
+    if(f.home&&!hoyas.includes(f.home))f.home=null;
+    if(f.home){const [mx,my]=hoyaMouth(f.home,t),dx=mx-f.x,dy=my-f.y,d=Math.hypot(dx,dy)||1;
+      f.vx+=(dx/d*170-f.vx)*Math.min(1,dt*5);f.vy+=(dy/d*170-f.vy)*Math.min(1,dt*5);
+      if(d<f.home.R*.6&&f.home.o<.3){f.home=hoyas.find(q=>q.st==='open'&&q.g>=1)||null;if(!f.home){f.vy=25;f.vx=(Math.random()-.5)*60}}}
+    else{f.vx+=(Math.sin(f.ph*1.3)*(f.kind==='ebi'?28:12)-f.vx)*Math.min(1,dt*2);f.vy+=(38-f.vy)*Math.min(1,dt)}
+    f.x+=f.vx*dt;f.y+=f.vy*dt;
+    let eaten=false;
+    for(const h of hoyas){if(h.o<.55)continue;const [mx,my]=hoyaMouth(h,t);
+      if((f.x-mx)**2+(f.y-my)**2<(h.R*.5)**2){hoyaEat(h,f);hfood.splice(i,1);eaten=true;break}}
+    if(!eaten&&(f.y>floorY(f.x)+5||f.x<-30||f.x>W+30))hfood.splice(i,1);
+  }
+}
+function hoyaEat(h,f){
+  h.st='shut';h.tm=1.6;h.chew=1.2;score+=3;evt.n++;$('evn').textContent=evt.n;chomp();
+  for(let k=0;k<10;k++){const a=Math.random()*TAU,v=30+Math.random()*70;
+    bits.push({x:f.x,y:f.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:1+Math.random()*2,life:.8,col:'#ffd2b8'})}
+  pops.push({x:f.x,y:f.y-h.R*.9,life:1,txt:'パクッ +3',col:'#ffd2b8'});update();
+}
+function hitHoya(px,py){
+  if(!evt||evt.kind!=='hoya')return false;
+  const t=performance.now()/1000;
+  for(const f of hfood){if((px-f.x)**2+(py-f.y)**2>(f.r+22)**2)continue;
+    let best=null,bd=1e9;
+    for(const h of hoyas){if(h.g<1)continue;const [mx,my]=hoyaMouth(h,t),d=(mx-f.x)**2+(my-f.y)**2+(h.st==='open'?0:1e6);
+      if(d<bd){bd=d;best=h}}
+    if(best){f.home=best;blip();pops.push({x:f.x,y:f.y-18,life:.7,txt:'すいっ',col:'#fff2e6'})}
+    return true}
+  for(const h of hoyas){if(h.g<.7)continue;const p=hoyaTop(h,t),R=h.R;
+    if((px-p.x)**2+(py-(p.y-R*.45))**2>(R*.95+14)**2)continue;
+    if(h.cd>0)return true;h.cd=.4;
+    if(h.st==='open'){h.st='shut';h.tm=1;h.chew=.5;noise(.1,'lowpass',500,.3);
+      pops.push({x:p.x,y:p.y-R*1.5,life:.8,txt:'ぱくん',col:'#ffd2b8'})}
+    else pops.push({x:p.x,y:p.y-R*1.5,life:.7,txt:'もぐ',col:'#ffd2b8'});
+    return true}
+  return false;
+}
+function drawHoya(t){
+  const e=evt;if(!e||e.kind!=='hoya')return;
+  const a=Math.max(0,Math.min(1,e.t/1.2,(e.len-e.t)/1.5));if(a<=0)return;
+  cx.save();cx.globalAlpha=a;seaFloor(.35);
+  for(const h of hoyas){if(h.g<=0)continue;
+    const p=hoyaTop(h,t),R=h.R*Math.min(1,h.g);
+    cx.strokeStyle='rgba(225,195,180,.8)';cx.lineWidth=Math.max(2,R*.14);cx.lineCap='round';
+    cx.beginPath();cx.moveTo(p.fx,p.fy);cx.quadraticCurveTo(p.fx+(p.x-p.fx)*.2,p.fy-p.hh*.55,p.x,p.y);cx.stroke();
+    cx.save();cx.translate(p.x,p.y-R*.45);cx.rotate(p.ang);
+    const cw=h.chew>0?1+Math.sin(h.chew*18)*.05:1;cx.scale(h.f*cw,1/cw);
+    const o=Math.max(0,h.o),jg=cx.createRadialGradient(R*.3,-R*.3,1,R*.3,0,R*1.1);
+    jg.addColorStop(0,'rgba(255,240,232,.92)');jg.addColorStop(1,'rgba(232,170,150,.72)');
+    cx.translate(-R*.45,0);
+    // inside of the big mouth
+    if(o>.02){cx.fillStyle='#4e1520';cx.beginPath();cx.ellipse(R*.55,0,R*.62,R*.62*o,0,0,TAU);cx.fill();
+      cx.fillStyle='rgba(255,140,140,.35)';cx.beginPath();cx.ellipse(R*.4,0,R*.25,R*.22*o,0,0,TAU);cx.fill()}
+    // lower jaw, with the stomach showing through
+    cx.save();cx.rotate(o*.35);
+    cx.fillStyle=jg;cx.beginPath();cx.moveTo(0,0);cx.bezierCurveTo(-R*.05,R*.8,R*1.2,R*.8,R*1.25,R*.02);
+    cx.quadraticCurveTo(R*.65,-R*.06,0,0);cx.fill();
+    cx.fillStyle='rgba(230,115,75,.6)';cx.beginPath();cx.ellipse(R*.45,R*.32,R*.24,R*.14,0,0,TAU);cx.fill();
+    cx.restore();
+    // upper jaw (the hood) that snaps shut
+    cx.save();cx.rotate(-o*.7);
+    cx.fillStyle=jg;cx.beginPath();cx.moveTo(0,0);cx.bezierCurveTo(-R*.05,-R*.9,R*1.25,-R*.9,R*1.32,-R*.02);
+    cx.quadraticCurveTo(R*.65,R*.07,0,0);cx.fill();
+    cx.strokeStyle='rgba(255,244,236,.8)';cx.lineWidth=1.5;cx.stroke();
+    cx.fillStyle='rgba(255,236,224,.95)';
+    for(let k=0;k<5;k++){const f=.3+k*.16;cx.beginPath();cx.arc(R*1.3*f,R*.05*(1-f),R*.05,0,TAU);cx.fill()}
+    cx.fillStyle='rgba(255,255,255,.4)';cx.beginPath();cx.ellipse(R*.45,-R*.55,R*.22,R*.07,-.15,0,TAU);cx.fill();
+    cx.restore();
+    cx.restore();
+  }
+  // drifting food
+  for(const f of hfood){
+    if(f.kind==='snow'){cx.fillStyle='rgba(240,248,250,.8)';cx.beginPath();cx.arc(f.x,f.y,f.r*.8,0,TAU);cx.fill()}
+    else{cx.save();cx.globalCompositeOperation='lighter';
+      cx.fillStyle='rgba(255,170,190,.25)';cx.beginPath();cx.arc(f.x,f.y,f.r*2.6,0,TAU);cx.fill();cx.restore();
+      cx.fillStyle='#ffc8d4';cx.beginPath();cx.ellipse(f.x,f.y,f.r*1.3,f.r*.7,Math.atan2(f.vy,f.vx),0,TAU);cx.fill()}
+    if(f.home){cx.strokeStyle='rgba(255,240,230,.35)';cx.lineWidth=1;cx.beginPath();cx.moveTo(f.x,f.y);cx.lineTo(f.x-f.vx*.12,f.y-f.vy*.12);cx.stroke()}
+  }
+  cx.restore();
+}
+function chomp(){
+  noise(.12,'lowpass',420,.5);
+  if(!soundOn||!actx)return;
+  const n=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(160,n);o.frequency.exponentialRampToValueAtTime(80,n+.12);
+  g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.2,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+.2);
+  o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.25);
+}
+
 /* ---- tapping ---- */
 let lastLevel=0,hintGone=false;
 function hit(px,py){
@@ -1241,6 +1478,8 @@ function hit(px,py){
   if(hitLoot(px,py))return;
   if(hitChest(px,py))return;
   if(hitLily(px,py))return;
+  if(hitBlob(px,py))return;
+  if(hitHoya(px,py))return;
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i],dx=px-b.x,dy=py-b.y;
     if(dx*dx+dy*dy<=(b.r+10)**2){
@@ -1339,7 +1578,7 @@ function frame(now){
   const c=cfg(),t=now/1000;
   stepEvent(dt);
   spawnT-=dt;
-  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily')){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
+  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily'||evt.kind==='blob'||evt.kind==='hoya')){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
   for(const m of motes){m.y-=m.v*dt;if(m.y<0)m.y+=1}
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i];b.born=Math.min(1,b.born+dt*2.5);
@@ -1358,7 +1597,7 @@ function frame(now){
   drawWhale(t);drawDeme(t);
   stepCreature(dt);drawCreature(t);
   drawGlow();
-  drawTreasure(t);drawLily(t);drawTents(t);
+  drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawTents(t);
   for(const b of bubbles)drawBubble(b);
   for(const s of shrimps)drawShrimp(s);
   drawLoot();drawInk();
