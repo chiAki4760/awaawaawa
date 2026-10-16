@@ -1025,31 +1025,44 @@ function drawDeme(t){
   cx.fillStyle=chin;
   cx.fillRect(hx-rx,h*.15,rx*2,h*.3);
   // 上を向いた緑の目（ほのかに光る）
+  // 上を向いた筒状の緑の目（泡のほうへ少しだけ傾く）
+  const tilt=Math.max(-.35,Math.min(.35,(d.ang+Math.PI/2)*.3));
   for(let i=0;i<2;i++){
-    const ex=L*(.15+i*.08)+Math.cos(d.ang)*h*.03;
-    const ey=-h*(.22+i*.03)+Math.sin(d.ang)*h*.04;
-    const r=h*(.12+i*.012);
-    cx.fillStyle='rgba(140,255,170,'+(.1+.08*pulse)+')';
+    cx.save();
+    cx.globalAlpha=a*(i?1:.7);
+    cx.translate(L*(.14+i*.075),-h*.04);
+    cx.rotate(tilt);
+    const ew=h*(.13+i*.015),len=h*(.3+i*.02);
+    const tube=cx.createLinearGradient(-ew,0,ew,0);
+    tube.addColorStop(0,'rgba(25,80,58,.85)');
+    tube.addColorStop(.4,'rgba(95,175,115,.9)');
+    tube.addColorStop(1,'rgba(20,70,52,.85)');
+    cx.fillStyle=tube;
     cx.beginPath();
-    cx.arc(ex,ey,r*1.6,0,Math.PI*2);
+    cx.moveTo(-ew*.4,0);
+    cx.lineTo(-ew*.5,-len);
+    cx.lineTo(ew*.5,-len);
+    cx.lineTo(ew*.4,0);
+    cx.closePath();
     cx.fill();
-    cx.fillStyle='rgba(120,200,145,.35)';
+    cx.fillStyle='rgba(140,255,170,'+(.12+.1*pulse)+')';
     cx.beginPath();
-    cx.ellipse(ex,ey+h*.12,r*.6,h*.13,0,0,Math.PI*2);
+    cx.ellipse(0,-len,ew*1.1,ew*.85,0,0,Math.PI*2);
     cx.fill();
-    const lens=cx.createRadialGradient(ex-r*.3,ey-r*.3,1,ex,ey,r);
-    lens.addColorStop(0,'#e6ffc4');
-    lens.addColorStop(.4,'#97e27f');
+    const lens=cx.createRadialGradient(-ew*.15,-len-ew*.15,1,0,-len,ew*.6);
+    lens.addColorStop(0,'#eaffc8');
+    lens.addColorStop(.4,'#9ce684');
     lens.addColorStop(.8,'#3f9c5e');
     lens.addColorStop(1,'#1d5a40');
     cx.fillStyle=lens;
     cx.beginPath();
-    cx.arc(ex,ey,r,0,Math.PI*2);
+    cx.ellipse(0,-len,ew*.6,ew*.45,0,0,Math.PI*2);
     cx.fill();
-    cx.fillStyle='rgba(255,255,235,.85)';
+    cx.fillStyle='rgba(255,255,235,.9)';
     cx.beginPath();
-    cx.ellipse(ex-r*.35,ey-r*.4,r*.2,r*.13,-.5,0,Math.PI*2);
+    cx.ellipse(-ew*.22,-len-ew*.18,ew*.16,ew*.09,-.3,0,Math.PI*2);
     cx.fill();
+    cx.restore();
   }
   // 目に見える鼻の穴（つぶらで少し不気味）
   const nos=[[L*.355,-h*.08,h*.04],[L*.32,-h*.02,h*.058]];
