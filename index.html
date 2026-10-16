@@ -872,10 +872,10 @@ function ping(type){
 /* ---- デメニギス: a barreleye with a see-through head; its green eyes follow the bubbles ---- */
 let deme=null;
 function startDeme(){
-  const L=Math.min(W*.8,400),dir=Math.random()<.5?1:-1;
-  deme={L,h:L*.2,dir,x:dir>0?-L*.6:W+L*.6,y:H*.5,v:(W+L*1.2)/4.2,ang:-.3,cd:0,look:0};
+  const L=Math.min(W*.62,300),dir=Math.random()<.5?1:-1;
+  deme={L,h:L*.4,dir,x:dir>0?-L*.6:W+L*.6,y:H*.5,v:(W+L*1.2)/4.2,ang:-.3,cd:0,look:0};
 }
-function demeEye(){const d=deme;return[d.x+d.dir*d.L*.2,d.y-d.h*.35]}
+function demeEye(){const d=deme;return[d.x+d.dir*d.L*.19,d.y-d.h*.24]}
 function stepDeme(dt){
   const d=deme;if(!d)return;const e=evt;
   const fast=(W+d.L*1.2)/4.2,slow=W*.025,rem=(W*.5-d.dir*W*.06-d.x)*d.dir;
@@ -892,7 +892,7 @@ function stepDeme(dt){
 }
 function hitDeme(px,py){
   const d=deme;if(!d||!evt||evt.kind!=='deme')return false;
-  const dx=(px-d.x)/(d.L*.5+10),dy=(py-(d.y-d.h*.3))/(d.h*1.3+10);
+  const dx=(px-(d.x+d.dir*d.L*.03))/(d.L*.45+12),dy=(py-(d.y-d.h*.1))/(d.h*.7+12);
   if(dx*dx+dy*dy>1)return false;
   if(d.cd<=0){
     d.cd=.8;d.look=1.4;peek();
@@ -913,55 +913,199 @@ function peek(){
 }
 function drawDeme(t){
   const d=deme;if(!d||!evt)return;
-  const L=d.L,h=d.h,a=Math.max(0,Math.min(1,evt.t/1.2,(evt.len-evt.t)/1.2));
-  cx.save();cx.globalAlpha=a;cx.translate(d.x,d.y+Math.sin(t*.9)*7);cx.scale(d.dir,1);
-  const halo=cx.createRadialGradient(0,-h*.3,0,0,-h*.3,L*.6);halo.addColorStop(0,'rgba(170,255,210,.12)');halo.addColorStop(1,'rgba(170,255,210,0)');
-  cx.fillStyle=halo;cx.beginPath();cx.ellipse(0,-h*.3,L*.62,h*2.2,0,0,TAU);cx.fill();
-  // tail
-  const sw=Math.sin(t*2.4)*h*.18;
-  cx.fillStyle='rgba(120,100,85,.75)';cx.beginPath();cx.moveTo(-L*.44,0);
-  cx.quadraticCurveTo(-L*.52,-h*.2+sw,-L*.6,-h*.5+sw);cx.quadraticCurveTo(-L*.55,sw,-L*.6,h*.5+sw);
-  cx.quadraticCurveTo(-L*.52,h*.2+sw,-L*.44,0);cx.fill();
-  // big see-through fins
-  const fl=Math.sin(t*1.8)*.25;
-  cx.fillStyle='rgba(200,235,240,.18)';cx.strokeStyle='rgba(220,250,255,.35)';cx.lineWidth=1;
-  for(const k of[0,1]){cx.save();cx.translate(L*(.05-k*.22),h*.3);cx.rotate(.5+fl*(k?-1:1));
-    cx.beginPath();cx.moveTo(0,0);cx.quadraticCurveTo(-L*.14,h*.25,-L*.2,h*.75);cx.quadraticCurveTo(-L*.04,h*.6,0,0);cx.fill();cx.stroke();cx.restore()}
-  // body
-  const body=()=>{cx.beginPath();cx.moveTo(L*.45,h*.02);
-    cx.bezierCurveTo(L*.44,-h*.3,L*.3,-h*.42,L*.05,-h*.4);
-    cx.bezierCurveTo(-L*.2,-h*.36,-L*.4,-h*.18,-L*.47,0);
-    cx.bezierCurveTo(-L*.4,h*.2,-L*.2,h*.42,L*.05,h*.42);
-    cx.bezierCurveTo(L*.3,h*.42,L*.44,h*.3,L*.45,h*.02);cx.closePath()};
-  const bg=cx.createLinearGradient(0,-h*.45,0,h*.45);bg.addColorStop(0,'#5a4a3e');bg.addColorStop(.6,'#3a3029');bg.addColorStop(1,'#8c96a0');
-  cx.fillStyle=bg;body();cx.fill();
-  cx.save();body();cx.clip();
-  cx.strokeStyle='rgba(230,220,200,.12)';cx.lineWidth=1;
-  for(let i=0;i<9;i++){const x=-L*.35+i*L*.08;cx.beginPath();cx.arc(x,0,h*.3,-1,1);cx.stroke()}
+  const L=d.L,h=d.h;
+  const a=Math.max(0,Math.min(1,evt.t/1.2,(evt.len-evt.t)/1.2));
+  const pulse=.5+.5*Math.sin(t*1.5);
+  cx.save();
+  cx.globalAlpha=a;
+  cx.translate(d.x,d.y+Math.sin(t*.9)*4);
+  cx.scale(d.dir,1);
+  cx.rotate(Math.sin(t*.7)*.03);
+  // 頭のまわりのほのかな光
+  const halo=cx.createRadialGradient(L*.18,-h*.1,2,L*.18,-h*.1,L*.6);
+  halo.addColorStop(0,'rgba(120,220,200,.10)');
+  halo.addColorStop(1,'rgba(120,220,200,0)');
+  cx.fillStyle=halo;
+  cx.beginPath();
+  cx.arc(L*.18,-h*.1,L*.6,0,Math.PI*2);
+  cx.fill();
+  // 白っぽい半透明の尾びれ
+  const sw=Math.sin(t*2)*h*.12;
+  const tg=cx.createLinearGradient(-L*.6,0,-L*.36,0);
+  tg.addColorStop(0,'rgba(185,205,220,.6)');
+  tg.addColorStop(1,'rgba(110,130,145,.3)');
+  cx.fillStyle=tg;
+  cx.beginPath();
+  cx.moveTo(-L*.36,-h*.12);
+  cx.quadraticCurveTo(-L*.48,-h*.25+sw*.5,-L*.6,-h*.52+sw);
+  cx.quadraticCurveTo(-L*.53,sw,-L*.6,h*.52+sw);
+  cx.quadraticCurveTo(-L*.48,h*.25+sw*.5,-L*.36,h*.12);
+  cx.closePath();
+  cx.fill();
+  cx.strokeStyle='rgba(225,235,245,.25)';
+  cx.lineWidth=.8;
+  for(let i=-3;i<=3;i++){
+    cx.beginPath();
+    cx.moveTo(-L*.38,0);
+    cx.quadraticCurveTo(-L*.48,i*h*.08+sw*.5,-L*.57,i*h*.15+sw);
+    cx.stroke();
+  }
+  // 大きな黒い背びれ
+  const dw=Math.sin(t*1.3)*h*.04;
+  cx.fillStyle='#1c1715';
+  cx.beginPath();
+  cx.moveTo(-L*.28,-h*.36);
+  cx.bezierCurveTo(-L*.32,-h*.98+dw,-L*.04,-h*1.02+dw,L*.01,-h*.42);
+  cx.closePath();
+  cx.fill();
+  // 腹びれ
+  cx.fillStyle='#181412';
+  cx.beginPath();
+  cx.moveTo(-L*.2,h*.38);
+  cx.quadraticCurveTo(-L*.3,h*.75-dw,-L*.1,h*.6);
+  cx.quadraticCurveTo(-L*.06,h*.48,-L*.2,h*.38);
+  cx.fill();
+  // 丸くて黒っぽい魚体
+  const bg=cx.createLinearGradient(0,-h*.5,0,h*.5);
+  bg.addColorStop(0,'#2e2622');
+  bg.addColorStop(.5,'#15110f');
+  bg.addColorStop(1,'#211b18');
+  cx.fillStyle=bg;
+  cx.beginPath();
+  cx.ellipse(-L*.05,0,L*.34,h*.52,0,0,Math.PI*2);
+  cx.fill();
+  const sheen=cx.createRadialGradient(-L*.12,-h*.3,1,-L*.12,-h*.3,L*.25);
+  sheen.addColorStop(0,'rgba(140,105,85,.2)');
+  sheen.addColorStop(1,'rgba(140,105,85,0)');
+  cx.fillStyle=sheen;
+  cx.beginPath();
+  cx.ellipse(-L*.05,0,L*.34,h*.52,0,0,Math.PI*2);
+  cx.fill();
+  // 透明ドームの中の顔
+  const hx=L*.2,hy=-h*.05,rx=L*.22,ry=h*.47;
+  cx.save();
+  cx.beginPath();
+  cx.ellipse(hx,hy,rx,ry,0,0,Math.PI*2);
+  cx.clip();
+  const face=cx.createRadialGradient(L*.27,h*.02,2,L*.24,0,L*.26);
+  face.addColorStop(0,'#a9bec2');
+  face.addColorStop(.5,'#6f878e');
+  face.addColorStop(1,'rgba(35,48,55,.95)');
+  cx.fillStyle=face;
+  cx.fillRect(hx-rx,hy-ry,rx*2,ry*2);
+  // 透けて見える白いもやもや
+  cx.strokeStyle='rgba(240,242,235,.38)';
+  cx.lineWidth=1.2;
+  for(let i=0;i<7;i++){
+    const sx=L*(.04+i*.018);
+    cx.beginPath();
+    cx.moveTo(sx,-h*.42+i*h*.02);
+    cx.bezierCurveTo(sx+L*.04,-h*.3,sx-L*.01,-h*.15,sx+L*.03,-h*.02+Math.sin(t+i)*2);
+    cx.stroke();
+  }
+  // 体との境目をなじませる影
+  const shade=cx.createLinearGradient(hx-rx,0,hx-rx*.35,0);
+  shade.addColorStop(0,'rgba(20,16,15,.95)');
+  shade.addColorStop(1,'rgba(20,16,15,0)');
+  cx.fillStyle=shade;
+  cx.fillRect(hx-rx,hy-ry,rx,ry*2);
+  const chin=cx.createLinearGradient(0,h*.15,0,h*.42);
+  chin.addColorStop(0,'rgba(20,25,30,0)');
+  chin.addColorStop(1,'rgba(20,25,30,.6)');
+  cx.fillStyle=chin;
+  cx.fillRect(hx-rx,h*.15,rx*2,h*.3);
+  // 上を向いた緑の目（ほのかに光る）
+  for(let i=0;i<2;i++){
+    const ex=L*(.15+i*.08)+Math.cos(d.ang)*h*.03;
+    const ey=-h*(.22+i*.03)+Math.sin(d.ang)*h*.04;
+    const r=h*(.12+i*.012);
+    cx.fillStyle='rgba(140,255,170,'+(.1+.08*pulse)+')';
+    cx.beginPath();
+    cx.arc(ex,ey,r*1.6,0,Math.PI*2);
+    cx.fill();
+    cx.fillStyle='rgba(120,200,145,.35)';
+    cx.beginPath();
+    cx.ellipse(ex,ey+h*.12,r*.6,h*.13,0,0,Math.PI*2);
+    cx.fill();
+    const lens=cx.createRadialGradient(ex-r*.3,ey-r*.3,1,ex,ey,r);
+    lens.addColorStop(0,'#e6ffc4');
+    lens.addColorStop(.4,'#97e27f');
+    lens.addColorStop(.8,'#3f9c5e');
+    lens.addColorStop(1,'#1d5a40');
+    cx.fillStyle=lens;
+    cx.beginPath();
+    cx.arc(ex,ey,r,0,Math.PI*2);
+    cx.fill();
+    cx.fillStyle='rgba(255,255,235,.85)';
+    cx.beginPath();
+    cx.ellipse(ex-r*.35,ey-r*.4,r*.2,r*.13,-.5,0,Math.PI*2);
+    cx.fill();
+  }
+  // 目に見える鼻の穴（つぶらで少し不気味）
+  const nos=[[L*.355,-h*.08,h*.04],[L*.32,-h*.02,h*.058]];
+  for(const [nx,ny,nr] of nos){
+    cx.fillStyle='rgba(190,210,215,.5)';
+    cx.beginPath();
+    cx.ellipse(nx,ny,nr*1.25,nr*1.15,0,0,Math.PI*2);
+    cx.fill();
+    cx.fillStyle='#141b1f';
+    cx.beginPath();
+    cx.ellipse(nx,ny,nr,nr*.92,0,0,Math.PI*2);
+    cx.fill();
+    cx.fillStyle='rgba(255,255,255,.85)';
+    cx.beginPath();
+    cx.arc(nx-nr*.35,ny-nr*.35,nr*.25,0,Math.PI*2);
+    cx.fill();
+  }
   cx.restore();
-  // nostrils that look like eyes, and a tiny mouth
-  cx.fillStyle='#120c0a';
-  cx.beginPath();cx.ellipse(L*.37,-h*.12,h*.06,h*.045,0,0,TAU);cx.fill();
-  cx.beginPath();cx.ellipse(L*.32,-h*.14,h*.05,h*.04,0,0,TAU);cx.fill();
-  cx.strokeStyle='rgba(20,12,10,.8)';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(L*.45,h*.05);cx.lineTo(L*.41,h*.08);cx.stroke();
-  // the transparent dome over the head
-  const hx=L*.22,hy=-h*.45,rx=L*.2,ry=h*.64;
-  const dg=cx.createRadialGradient(hx-rx*.2,hy-ry*.3,0,hx,hy,Math.max(rx,ry));
-  dg.addColorStop(0,'rgba(200,250,255,.05)');dg.addColorStop(.75,'rgba(190,245,255,.10)');dg.addColorStop(1,'rgba(200,250,255,.28)');
-  cx.fillStyle=dg;cx.beginPath();cx.ellipse(hx,hy,rx,ry,0,0,TAU);cx.fill();
-  // green barrel eyes inside
-  const eyeOne=(ox,al)=>{cx.save();cx.globalAlpha=a*al;cx.translate(L*.2+ox,-h*.35);cx.rotate(d.ang);
-    const len=h*.5,w=h*.2;
-    const eg=cx.createLinearGradient(0,-w/2,0,w/2);eg.addColorStop(0,'#3f8a5c');eg.addColorStop(1,'#1c4a32');
-    cx.fillStyle=eg;cx.beginPath();cx.moveTo(0,-w*.35);cx.lineTo(len,-w/2);cx.lineTo(len,w/2);cx.lineTo(0,w*.35);cx.closePath();cx.fill();
-    cx.shadowColor='#7dff9a';cx.shadowBlur=18+Math.sin(t*3)*6;
-    cx.fillStyle='#8dffaa';cx.beginPath();cx.arc(len,0,w*.55,0,TAU);cx.fill();
-    cx.shadowBlur=0;cx.fillStyle='rgba(255,255,255,.8)';cx.beginPath();cx.arc(len+w*.12,-w*.2,w*.16,0,TAU);cx.fill();
-    cx.restore()};
-  eyeOne(-L*.035,.55);eyeOne(0,1);
-  cx.strokeStyle='rgba(220,252,255,.55)';cx.lineWidth=1.5;cx.beginPath();cx.ellipse(hx,hy,rx,ry,0,0,TAU);cx.stroke();
-  cx.strokeStyle='rgba(255,255,255,.55)';cx.lineWidth=2.5;cx.lineCap='round';
-  cx.beginPath();cx.ellipse(hx,hy,rx*.82,ry*.82,0,-2.6,-1.9);cx.stroke();
+  // おちょぼ口
+  cx.strokeStyle='rgba(25,30,35,.85)';
+  cx.lineWidth=1.6;
+  cx.lineCap='round';
+  cx.beginPath();
+  cx.moveTo(L*.415,h*.15);
+  cx.quadraticCurveTo(L*.39,h*.21,L*.355,h*.19);
+  cx.stroke();
+  cx.fillStyle='rgba(150,165,170,.6)';
+  cx.beginPath();
+  cx.ellipse(L*.4,h*.2,h*.03,h*.02,.4,0,Math.PI*2);
+  cx.fill();
+  // 筋の入った黒い胸びれ
+  const fw=Math.sin(t*1.8)*.15;
+  cx.save();
+  cx.translate(-L*.02,h*.18);
+  cx.rotate(.25+fw);
+  cx.fillStyle='rgba(38,30,26,.9)';
+  cx.beginPath();
+  cx.moveTo(0,0);
+  cx.bezierCurveTo(-L*.1,h*.05,-L*.2,h*.25,-L*.2,h*.42);
+  cx.bezierCurveTo(-L*.1,h*.4,-L*.02,h*.25,L*.03,h*.08);
+  cx.closePath();
+  cx.fill();
+  cx.strokeStyle='rgba(130,100,85,.35)';
+  cx.lineWidth=.8;
+  for(let i=1;i<6;i++){
+    cx.beginPath();
+    cx.moveTo(0,h*.02);
+    cx.lineTo(-L*.2+i*L*.035,h*.42-i*h*.05);
+    cx.stroke();
+  }
+  cx.restore();
+  // ドームの輪郭とガラスの反射
+  cx.strokeStyle='rgba(200,240,250,.45)';
+  cx.lineWidth=1.2;
+  cx.beginPath();
+  cx.ellipse(hx,hy,rx,ry,0,-2.2,2.0);
+  cx.stroke();
+  cx.strokeStyle='rgba(255,255,255,.6)';
+  cx.lineWidth=2.4;
+  cx.beginPath();
+  cx.ellipse(hx,hy,rx*.86,ry*.86,0,-1.95,-1.25);
+  cx.stroke();
+  cx.fillStyle='rgba(255,255,255,.5)';
+  cx.beginPath();
+  cx.ellipse(hx+rx*.45,hy-ry*.55,rx*.06,ry*.04,-.6,0,Math.PI*2);
+  cx.fill();
   cx.restore();
 }
 
