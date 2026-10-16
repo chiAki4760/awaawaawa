@@ -52,6 +52,15 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 .ev b{color:var(--glow);font-size:17px}
 .ev .tag{font-size:12px;letter-spacing:.08em;color:var(--deep);background:var(--glow);border-radius:999px;padding:2px 9px;margin-right:4px}
 .ev.hot{border-color:rgba(255,178,122,.45)} .ev.hot b{color:var(--warm)} .ev.hot .tag{background:var(--warm)}
+.endc{position:fixed;left:50%;top:52%;transform:translate(-50%,-50%);width:min(86vw,320px);box-sizing:border-box;padding:24px 20px 20px;
+  border-radius:22px;background:rgba(6,35,58,.74);border:1px solid rgba(191,243,240,.32);backdrop-filter:blur(8px);
+  text-align:center;opacity:0;pointer-events:none;transition:opacity 1.1s ease}
+.endc.show{opacity:1;pointer-events:auto}
+.endc .t{display:block;font-size:28px;font-weight:700;color:var(--ink)}
+.endc .s{margin:6px 0 16px;font-size:14px;line-height:1.7;color:var(--soft)}
+.endc dl{display:grid;grid-template-columns:auto auto;gap:6px 14px;margin:0 auto 18px;width:max-content;text-align:left;font-size:14px}
+.endc dt{color:var(--soft)} .endc dd{margin:0;color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.endc .go{font-size:16px;padding:10px 22px;background:rgba(191,243,240,.16);border-color:rgba(191,243,240,.45)}
 </style>
 </head>
 <body>
@@ -73,6 +82,12 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 <div class="toast" id="toast"></div>
 <div class="ev" id="ev" hidden><span class="tag" id="evName">熱水の丘</span>のこり <b id="evt">0</b> 秒・<span id="evLbl">エビ</span> <b id="evn">0</b> <span id="evU">ぴき</span></div>
 <div class="hint" id="hint">泡にふれると、ぱっと消えます</div>
+<div class="endc" id="endc" role="dialog" aria-label="おかえりなさい">
+  <b class="t">おかえりなさい</b>
+  <p class="s">深海探査機に乗って、<br>海の上まで帰ってきました</p>
+  <dl><dt>この旅ではじいた泡</dt><dd id="eScore">0</dd><dt>であった生き物</dt><dd id="eMet">0</dd><dt>海から帰ったのは</dt><dd id="eRet">1 回目</dd></dl>
+  <button class="btn go" id="again" type="button">もう一度もぐる</button>
+</div>
 
 <script>
 (function(){
@@ -413,11 +428,12 @@ function endEvent(){
   happy();update();
 }
 function stepEvent(dt){
-  if(pendingEvt&&!evt){pendingEvt.wait-=dt;if(pendingEvt.wait<=0){const k=pendingEvt.kind;pendingEvt=null;startEvent(k)}}
+  if(pendingEvt&&!evt){pendingEvt.wait-=dt;if(pendingEvt.wait<=0){const k=pendingEvt.kind;pendingEvt=null;if(k==='sub')startSub();else startEvent(k)}}
   if(!evt)return;
   evt.t+=dt;
   const left=Math.max(0,Math.ceil(evt.len-evt.t));
   if(left!==evt.shown){evt.shown=left;$('evt').textContent=left}
+  if(evt.kind==='sub'){stepSub(dt);return}
   if(evt.kind==='vent')stepVent(dt);
   else if(evt.kind==='whale')stepWhale(dt);
   else if(evt.kind==='squid')stepSquid(dt);
@@ -1366,7 +1382,9 @@ function startHoya(){
   const n=W<500?3:4,R=Math.max(30,Math.min(56,Math.min(W,H)*.11));hoyas=[];hfood=[];
   for(let i=0;i<n;i++)hoyas.push({x:W*(i+.5)/n+(Math.random()-.5)*W/n*.3,R,hh:H*(.1+Math.random()*.16),ph:Math.random()*6,
     o:0,st:'open',tm:1+i*.5+Math.random(),chew:0,cd:0,tilt:(Math.random()-.5)*.3,f:i%2?-1:1,g:-(.3+i*.3)});
-  evt.ft=.5;
+  evt.ft=.3;
+  for(let i=0;i<10;i++)hfood.push({x:W*(.05+Math.random()*.9),y:H*(.08+Math.random()*.5),vx:0,vy:32+Math.random()*16,r:3.5+Math.random()*2.5,
+    kind:Math.random()<.4?'ebi':'snow',ph:Math.random()*6,home:null});
 }
 function hoyaTop(h,t){
   const fy=floorY(h.x),gg=Math.max(0,Math.min(1,h.g)),hh=h.hh*gg,sway=Math.sin(t*.7+h.ph)*hh*.06;
@@ -1388,8 +1406,8 @@ function stepHoya(dt){
     const tg=h.g<1?0:h.st==='open'?1:0;h.o+=(tg-h.o)*Math.min(1,dt*(tg<h.o?14:2.2));
   }
   e.ft-=dt;
-  if(e.ft<=0&&!fin){e.ft=.5+Math.random()*.6;
-    if(hfood.length<14)hfood.push({x:W*(.05+Math.random()*.9),y:-10,vx:0,vy:32+Math.random()*16,r:3.5+Math.random()*2.5,
+  if(e.ft<=0&&!fin){e.ft=.18+Math.random()*.22;
+    if(hfood.length<28)hfood.push({x:W*(.05+Math.random()*.9),y:-10,vx:0,vy:32+Math.random()*16,r:3.5+Math.random()*2.5,
       kind:Math.random()<.4?'ebi':'snow',ph:Math.random()*6,home:null})}
   for(let i=hfood.length-1;i>=0;i--){const f=hfood[i];f.ph+=dt;
     if(f.home&&!hoyas.includes(f.home))f.home=null;
@@ -1480,10 +1498,158 @@ function chomp(){
   o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.25);
 }
 
+/* =====================================================================
+   ゴール: after one full round of events, a deep-sea submersible comes
+   down. Tap it to board, rise past the creatures you met, and arrive
+   home at the surface. "もう一度もぐる" starts a fresh dive.
+   ===================================================================== */
+let sub=null,parade=[],depthK=null,returns=0;
+try{returns=+localStorage.getItem('awa-return')||0}catch(e){}
+function subSize(){return Math.min(W*.5,240)}
+function startSub(){
+  evt={kind:'sub',t:0,n:0,len:1e9,shown:-1};
+  const S=subSize();sub={S,x:W/2,y:-S,phase:'down',pt:0,board:0,shown:false,d0:2+level()*8,k0:Math.min(level(),8)/8};
+  $('ev').hidden=true;sonar();
+  showToast('<b>ピコン…</b>上から明かりが近づいてきます。深海探査機がむかえに来ました',3600);
+  update();
+}
+function setHint(txt){const el=$('hint');if(txt){el.textContent=txt;el.style.opacity=1}else el.style.opacity=0}
+function buildParade(){
+  parade=[];let i=0;
+  const list=CREA.filter(c=>met.includes(c.id));
+  for(const c of list){parade.push({id:c.id,name:c.name,x:i%2?W*.78:W*.22,y:-70-i*170,dir:i%2?-1:1});i++}
+  if(met.includes('ebi'))for(let k=0;k<5;k++)parade.push({id:'ebi',x:W*(.15+Math.random()*.7),y:-70-i*170-k*30,ph:Math.random()*6});
+}
+function stepSub(dt){
+  const s=sub;if(!s)return;s.pt+=dt;
+  if(s.phase==='down'){
+    s.y=-s.S+(H*.45+s.S)*ease(s.pt/4);
+    if(s.pt>=4){s.phase='wait';s.pt=0;setHint('探査機にふれて、乗りこもう')}
+  }else if(s.phase==='board'){
+    s.board=Math.min(1,s.pt/1);
+    if(s.pt>=1.3){s.phase='up';s.pt=0;buildParade();whaleSong();
+      showToast('<b>浮上</b>出会った生き物たちが、見送ってくれています',3200)}
+  }else if(s.phase==='up'){
+    const p=Math.min(1,s.pt/14),ep=ease(p);
+    depthK=s.k0+(-.12-s.k0)*ep;
+    $('depth').textContent=Math.max(0,Math.round(s.d0*(1-ep)));
+    for(const m of motes){m.y+=dt*.3;if(m.y>1)m.y-=1}
+    for(const b of bubbles)b.y+=150*dt;
+    for(const q of parade){q.y+=115*dt;if(q.ph!==undefined)q.ph+=dt}
+    s.y=H*.45+Math.sin(s.pt*1.2)*6;
+    if(p>=1){s.phase='surface';s.pt=0;parade=[];splash()}
+  }else if(s.phase==='surface'){
+    s.y+=(H*.27-s.y)*Math.min(1,dt*2);
+    if(s.pt>1.6&&!s.shown){s.shown=true;showEnd()}
+  }
+}
+function hitSub(px,py){
+  const s=sub;if(!s||s.phase!=='wait')return;
+  const dx=(px-s.x)/(s.S*.6+16),dy=(py-s.y)/(s.S*.4+16);
+  if(dx*dx+dy*dy>1)return;
+  s.phase='board';s.pt=0;setHint('');happy();knock();
+  pops.push({x:s.x,y:s.y-s.S*.45,life:1,txt:'ガチャン',col:'#ffe6a8'});
+}
+function showEnd(){
+  returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
+  $('eScore').textContent=score;$('eMet').textContent=met.length+' / '+ZTOTAL;$('eRet').textContent=returns+' 回目';
+  $('endc').classList.add('show');happy();
+}
+function restart(){
+  $('endc').classList.remove('show');
+  evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;
+  score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];
+  for(let i=0;i<7;i++){spawn();const b=bubbles[bubbles.length-1];b.y=H*(.3+Math.random()*.7);b.born=1}
+  $('ev').hidden=true;setHint('');update();
+  showToast('<b>ふたたび海へ</b>泡にふれながら、もう一度もぐっていこう',3000);
+}
+function drawParade(t){
+  for(const q of parade){
+    if(q.y<-120||q.y>H+120)continue;
+    if(q.id==='ebi'){drawShrimp({x:q.x+Math.sin(q.ph*2)*20,y:q.y,s:10*vScale(),ph:q.ph,mode:'swim',ang:-Math.PI/2,hue:350});continue}
+    const S=crSize()*.75;
+    cx.save();cx.globalAlpha=.9;cx.translate(q.x,q.y);cx.scale(q.dir,1);
+    const hg=cx.createRadialGradient(0,0,0,0,0,S*1.8);hg.addColorStop(0,'rgba(170,240,255,.18)');hg.addColorStop(1,'rgba(170,240,255,0)');
+    cx.fillStyle=hg;cx.beginPath();cx.arc(0,0,S*1.8,0,TAU);cx.fill();
+    DRAW[q.id](S,t,false);cx.restore();
+    cx.textAlign='center';cx.font='700 13px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif';
+    cx.fillStyle='rgba(232,251,250,.85)';const tw=cx.measureText(q.name).width,tx=Math.max(tw/2+8,Math.min(W-tw/2-8,q.x));
+    cx.fillText(q.name,tx,q.y+S*1.2);cx.fillStyle='rgba(255,230,170,.9)';cx.fillText('またね',tx,q.y+S*1.2+17);
+  }
+}
+function drawSurface(t){
+  const s=sub;if(!s||s.phase!=='surface')return;
+  const a=Math.min(1,s.pt/1.2),sy=H*.2;
+  cx.save();cx.globalAlpha=a;
+  const sky=cx.createLinearGradient(0,0,0,sy);sky.addColorStop(0,'#8fcbe8');sky.addColorStop(1,'#ffe2b8');
+  cx.fillStyle=sky;cx.beginPath();cx.moveTo(0,0);cx.lineTo(W,0);
+  for(let x=W;x>=-10;x-=10)cx.lineTo(x,sy+Math.sin(x*.03+t*1.5)*4);cx.closePath();cx.fill();
+  const sun=cx.createRadialGradient(W*.78,sy*.45,0,W*.78,sy*.45,sy*.9);sun.addColorStop(0,'rgba(255,250,220,.95)');sun.addColorStop(.25,'rgba(255,230,170,.6)');sun.addColorStop(1,'rgba(255,230,170,0)');
+  cx.fillStyle=sun;cx.beginPath();cx.arc(W*.78,sy*.45,sy*.9,0,TAU);cx.fill();
+  cx.strokeStyle='rgba(255,255,255,.7)';cx.lineWidth=2;cx.beginPath();
+  for(let x=0;x<=W+10;x+=10)x?cx.lineTo(x,sy+Math.sin(x*.03+t*1.5)*4):cx.moveTo(x,sy+Math.sin(t*1.5)*4);cx.stroke();
+  cx.fillStyle='rgba(255,245,210,.5)';
+  for(let i=0;i<14;i++){const x=(i*83.7%100)/100*W,y=sy+8+(i*29%60);cx.fillRect(x+Math.sin(t+i)*6,y,18+(i%3)*8,1.5)}
+  cx.restore();
+}
+function drawSub(t){
+  const s=sub;if(!s)return;const S=s.S;
+  cx.save();cx.translate(s.x,s.y+Math.sin(t*1.3)*3);
+  // headlights
+  if(s.phase!=='surface'){cx.save();cx.globalCompositeOperation='lighter';
+    for(const k of[-1,1]){const lx=S*.38*(k>0?1:.9),ly=S*.12;
+      const g=cx.createLinearGradient(lx,ly,lx+S*.2,ly+S*1.4);g.addColorStop(0,'rgba(255,245,200,.28)');g.addColorStop(1,'rgba(255,245,200,0)');
+      cx.fillStyle=g;cx.beginPath();cx.moveTo(lx-6,ly);cx.lineTo(lx-S*.35+k*S*.1,ly+S*1.4);cx.lineTo(lx+S*.55+k*S*.1,ly+S*1.4);cx.lineTo(lx+6,ly);cx.fill()}
+    cx.restore()}
+  // propeller
+  const sp=Math.cos(t*(s.phase==='up'?30:12));
+  cx.fillStyle='#7d8a92';cx.beginPath();cx.ellipse(-S*.55,0,S*.04,S*.15*Math.abs(sp)+S*.02,0,0,TAU);cx.fill();
+  cx.fillStyle='#5f6b72';cx.fillRect(-S*.55,-S*.025,S*.08,S*.05);
+  // skids and folded arm
+  cx.strokeStyle='#6f7c84';cx.lineWidth=Math.max(2,S*.02);cx.lineCap='round';
+  cx.beginPath();cx.moveTo(-S*.32,S*.2);cx.lineTo(-S*.36,S*.3);cx.lineTo(S*.3,S*.3);cx.lineTo(S*.26,S*.2);cx.stroke();
+  cx.beginPath();cx.moveTo(S*.28,S*.16);cx.lineTo(S*.44,S*.24);cx.lineTo(S*.52,S*.18);cx.stroke();
+  // hull
+  const hg=cx.createLinearGradient(0,-S*.25,0,S*.25);hg.addColorStop(0,'#fffaf0');hg.addColorStop(.55,'#f4dc8a');hg.addColorStop(1,'#c99f45');
+  cx.fillStyle=hg;cx.beginPath();cx.ellipse(0,0,S*.5,S*.24,0,0,TAU);cx.fill();
+  cx.fillStyle='rgba(210,160,60,.55)';cx.beginPath();cx.ellipse(0,S*.12,S*.47,S*.07,0,0,Math.PI);cx.fill();
+  cx.fillStyle='rgba(255,255,255,.6)';cx.beginPath();cx.ellipse(-S*.08,-S*.15,S*.28,S*.04,0,0,TAU);cx.fill();
+  // sail with a beacon
+  cx.fillStyle='#ee8a3d';rr(-S*.17,-S*.38,S*.3,S*.2,S*.06);cx.fill();
+  cx.fillStyle='#ffffff';cx.font=`700 ${Math.max(9,S*.06)}px sans-serif`;cx.textAlign='center';cx.fillText('AWA',-S*.02,-S*.25);
+  const blink=Math.sin(t*4)>0;
+  cx.fillStyle=blink?'#ff5a5a':'#7a2a2a';cx.beginPath();cx.arc(-S*.02,-S*.41,S*.025,0,TAU);cx.fill();
+  if(blink){cx.fillStyle='rgba(255,90,90,.3)';cx.beginPath();cx.arc(-S*.02,-S*.41,S*.07,0,TAU);cx.fill()}
+  // hatch glow while waiting
+  if(s.phase==='wait'){const pr=(t%1.6)/1.6;
+    cx.strokeStyle=`rgba(255,240,180,${.7*(1-pr)})`;cx.lineWidth=2;cx.beginPath();cx.ellipse(0,0,S*(.55+pr*.25),S*(.28+pr*.15),0,0,TAU);cx.stroke()}
+  // the round window; someone small looks out once you board
+  const wx=S*.27,wy=-S*.02,wr=S*.1;
+  cx.fillStyle='#8a9aa5';cx.beginPath();cx.arc(wx,wy,wr*1.25,0,TAU);cx.fill();
+  const lit=s.board,wg=cx.createRadialGradient(wx-wr*.3,wy-wr*.3,1,wx,wy,wr);
+  wg.addColorStop(0,lit?'#fff2c0':'#3a6a8a');wg.addColorStop(1,lit?'#f0b860':'#0d2a40');
+  cx.fillStyle=wg;cx.beginPath();cx.arc(wx,wy,wr,0,TAU);cx.fill();
+  if(lit>0){cx.save();cx.globalAlpha*=lit;cx.fillStyle='#3a2410';
+    cx.beginPath();cx.arc(wx-wr*.3,wy-wr*.05,wr*.1,0,TAU);cx.arc(wx+wr*.3,wy-wr*.05,wr*.1,0,TAU);cx.fill();
+    cx.strokeStyle='#3a2410';cx.lineWidth=1.5;cx.beginPath();cx.arc(wx,wy+wr*.15,wr*.25,.2,Math.PI-.2);cx.stroke();cx.restore()}
+  cx.fillStyle='rgba(255,255,255,.6)';cx.beginPath();cx.ellipse(wx-wr*.4,wy-wr*.45,wr*.25,wr*.12,-.6,0,TAU);cx.fill();
+  cx.restore();
+}
+function sonar(){
+  if(!soundOn||!actx)return;
+  [0,.45,.9].forEach((d,i)=>{const n=actx.currentTime+d,o=actx.createOscillator(),g=actx.createGain();
+    o.type='sine';o.frequency.value=1250;g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.12/(i+1),n+.01);
+    g.gain.exponentialRampToValueAtTime(.0001,n+.6);o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.65)});
+}
+function splash(){noise(1.2,'highpass',900,.25);shimmer()}
+
+$('again').onclick=e=>{e.stopPropagation();restart()};
+
 /* ---- tapping ---- */
 let lastLevel=0,hintGone=false;
 function hit(px,py){
   if(paused)return;
+  if(evt&&evt.kind==='sub'){hitSub(px,py);return}
   if(evt&&evt.kind==='glow')plankRing(px,py);
   if(hitCreature(px,py))return;
   if(hitShrimp(px,py))return;
@@ -1527,8 +1693,9 @@ function update(){
   let leveled=false;
   if(L>lastLevel){lastLevel=L;leveled=true;
     if(!evt)showToast('<b>水深 '+(2+L*8)+' m</b>'+(depthNames[Math.min(L,depthNames.length-1)])+'へ。泡が少し速くなります',2600)}
-  if(!evt&&!pendingEvt&&score>=nextAt){pendingEvt={kind:SEQ[seqI%SEQ.length],wait:leveled?2.6:.4};seqI++}
-  $('nx').textContent=evt||pendingEvt?'できごとの最中':NAMES[SEQ[seqI%SEQ.length]]+'まで あと '+Math.max(0,nextAt-score);
+  if(!evt&&!pendingEvt&&score>=nextAt){pendingEvt={kind:seqI>=SEQ.length?'sub':SEQ[seqI],wait:leveled?2.6:.4};seqI++}
+  const nxName=seqI>=SEQ.length?'深海探査機':NAMES[SEQ[seqI]];
+  $('nx').textContent=evt||pendingEvt?'できごとの最中':nxName+'まで あと '+Math.max(0,nextAt-score);
 }
 let toastTimer;
 function showToast(html,ms){
@@ -1540,7 +1707,7 @@ function showToast(html,ms){
 
 /* ---- drawing ---- */
 function water(){
-  const L=Math.min(level(),8),k=L/8;
+  const L=Math.min(level(),8),k=depthK!=null?depthK:L/8;
   // deeper = darker
   const g=cx.createLinearGradient(0,0,0,H);
   g.addColorStop(0,`hsl(${192-k*12} ${62-k*20}% ${34-k*22}%)`);
@@ -1611,6 +1778,7 @@ function frame(now){
   stepCreature(dt);drawCreature(t);
   drawGlow();
   drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawTents(t);
+  drawParade(t);drawSurface(t);drawSub(t);
   for(const b of bubbles)drawBubble(b);
   for(const s of shrimps)drawShrimp(s);
   drawLoot();drawInk();
