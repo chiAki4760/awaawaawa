@@ -919,12 +919,16 @@ function tubeGeo(v,w){const g=ventGeo(v),sc=vScale(),bx=g.x+w.dx*g.w,by=hillY(bx
   return{bx,by,tx:bx+w.lean*h+Math.sin(performance.now()/1000*1.1+w.ph)*3,ty:by-h,sc}}
 function hitTube(px,py){
   if(!evt||evt.kind!=='vent'||!evt.arrived||evt.ending)return false;
+  // find the touched tube; the clusters of neighbouring chimneys overlap, so look at every chimney's tubes
+  let hit=null;
   for(const v of VENTS)for(const w of v.tubes){const q=tubeGeo(v,w);
-    if((px-q.tx)**2+(py-q.ty)**2<=(18*q.sc+12)**2||(Math.abs(px-q.bx)<12&&py<=q.by&&py>=q.ty)){
-      let n=0;for(const o of v.tubes){const r=tubeGeo(v,o);if(Math.abs(r.bx-q.bx)<70*q.sc){if(o.out>.5)n++;o.back=evt.t+1.4+Math.random()*.6}}
-      if(n){score+=n;pops.push({x:q.tx,y:q.ty-26,life:.9,txt:'シュポッ +'+n,col:'#ff9a9a'});noise(.18,'bandpass',900,.3);update()}
-      return true}}
-  return false;
+    if((px-q.tx)**2+(py-q.ty)**2<=(18*q.sc+14)**2||(Math.abs(px-q.bx)<14&&py<=q.by+6&&py>=q.ty)){hit=q;break}}
+  if(!hit)return false;
+  let n=0;
+  for(const v of VENTS)for(const o of v.tubes){const r=tubeGeo(v,o);
+    if(Math.abs(r.bx-hit.bx)<70*hit.sc){if(o.out>.5&&evt.t>=o.back)n++;o.back=evt.t+1.4+Math.random()*.6}}
+  if(n){score+=n;pops.push({x:hit.tx,y:hit.ty-26,life:.9,txt:'シュポッ +'+n,col:'#ff9a9a'});noise(.18,'bandpass',900,.3);update()}
+  return true;
 }
 function drawTubes(v,hp){
   for(const w of v.tubes){const q=tubeGeo(v,w),o=w.out;
@@ -2619,8 +2623,8 @@ function hit(px,py){
   if(evt&&evt.kind==='sub'){hitSub(px,py);return}
   if(evt&&evt.kind==='glow')plankRing(px,py);
   if(hitCreature(px,py))return;
-  if(hitShrimp(px,py))return;
   if(hitTube(px,py))return;
+  if(hitShrimp(px,py))return;
   if(hitSquid(px,py))return;
   if(hitLoot(px,py))return;
   if(hitChest(px,py))return;
