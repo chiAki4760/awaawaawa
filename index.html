@@ -1,3 +1,4 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <!doctype html>
 <html lang="ja">
 <head>
@@ -37,6 +38,10 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 .btns{display:flex;gap:8px;pointer-events:auto}
 .btn{font:inherit;font-size:13px;color:var(--ink);background:var(--glass);border:1px solid rgba(255,255,255,.14);
   border-radius:999px;padding:6px 12px;cursor:pointer;backdrop-filter:blur(6px)}
+.btns .btn{white-space:nowrap;padding:6px 10px;font-size:12px}
+.count{min-width:0}
+.side{flex-shrink:0}
+.btns{gap:6px}
 .btn:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
 .toast{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;
   opacity:0;transition:opacity .9s ease;font-size:15px;color:var(--soft);line-height:1.7;width:min(90vw,340px)}
@@ -60,6 +65,10 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 .endc .s{margin:6px 0 16px;font-size:14px;line-height:1.7;color:var(--soft)}
 .endc dl{display:grid;grid-template-columns:auto auto;gap:6px 14px;margin:0 auto 18px;width:max-content;text-align:left;font-size:14px}
 .endc dt{color:var(--soft)} .endc dd{margin:0;color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
+.rbtns{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.rbtns[hidden]{display:none}
+.rbtns .btn{font-size:15px;padding:10px 16px}
+#rAll,#rYes{border-color:rgba(255,150,140,.5);color:#ffd2cc}
 .endc .go{font-size:16px;padding:10px 22px;background:rgba(191,243,240,.16);border-color:rgba(191,243,240,.45)}
 </style>
 </head>
@@ -75,6 +84,7 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
     <div class="btns">
       <button class="btn" id="sound" type="button">音 オフ</button>
       <button class="btn" id="pause" type="button">ひと休み</button>
+      <button class="btn" id="resetBtn" type="button">リセット</button>
     </div>
   </div>
 </div>
@@ -86,7 +96,21 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
   <b class="t">おかえりなさい</b>
   <p class="s">深海探査機に乗って、<br>海の上まで帰ってきました</p>
   <dl><dt>この旅ではじいた泡</dt><dd id="eScore">0</dd><dt>であった生き物</dt><dd id="eMet">0</dd><dt>海から帰ったのは</dt><dd id="eRet">1 回目</dd></dl>
+  <p class="s" id="eNext" style="margin-top:-6px"></p>
   <button class="btn go" id="again" type="button">もう一度もぐる</button>
+</div>
+<div class="endc" id="resetc" role="dialog" aria-label="きろくのリセット">
+  <b class="t" style="font-size:22px">きろくのリセット</b>
+  <p class="s" id="rMsg">どれを消しますか？</p>
+  <div class="rbtns" id="rChoose">
+    <button class="btn" id="rBest" type="button">最高記録だけ消す</button>
+    <button class="btn" id="rAll" type="button">ぜんぶ消す</button>
+    <button class="btn" id="rNo" type="button">やめる</button>
+  </div>
+  <div class="rbtns" id="rConfirm" hidden>
+    <button class="btn" id="rYes" type="button">本当に消す</button>
+    <button class="btn" id="rBack" type="button">やめる</button>
+  </div>
 </div>
 
 <script>
@@ -126,11 +150,26 @@ const CREA=[
  {id:'gusoku',name:'ダイオウグソクムシ',from:5,note:'何年も食べなくても平気な、深海のだんごむし'},
  {id:'ryugu',name:'リュウグウノツカイ',from:6,note:'めったに会えない、銀色の長い魚'}
 ];
+/* from the 2nd dive on, a different crowd lives in the sea (even-numbered dives) */
+const CREA2=[
+ {id:'umiera',name:'ウミエラ',from:3,note:'鳥の羽のような形をした、サンゴのなかま。ふれると、ぽわっと青白く光ります',pop:'ぽわっ'},
+ {id:'umishida',name:'ウミシダ',from:3,note:'ウミユリのなかま。羽のような腕をばさばさ動かして泳ぎます',pop:'ばさばさ'},
+ {id:'hourai',name:'ホウライエソ',from:4,note:'口に入りきらないほど長いキバ。お腹の光る点で、えものをさそいます',pop:'ガバッ',scary:1},
+ {id:'fringe',name:'サーカスティック・フリンジヘッド',from:4,note:'ふだんは穴や貝がらにかくれる小さな魚。おこると口を大きく広げて、相手と大きさくらべをします',pop:'がばっ！'},
+ {id:'oni',name:'オニキンメ',from:5,note:'体のわりにとても大きな、ギザギザのキバ。口をとじると、キバは頭のくぼみにおさまります',pop:'ガチガチ',scary:1},
+ {id:'mitsukuri',name:'ミツクリザメ',from:6,note:'ピンク色の深海のサメ。えものを見つけると、あごが引き出しのように前へ飛び出します',pop:'ガシャッ',scary:1}
+];
+const ALLC=CREA.concat(CREA2);
+function seaB(){return returns%2===1}            // 2nd, 4th, ... dive
+function curCrea(){return seaB()?CREA2:CREA}
+let crTap=0;
+function tapOpen(hold){if(crTap<=0)return 0;return Math.min(1,crTap/.18)*(crTap>hold?Math.max(0,1-(crTap-hold)/.35):1)}
 /* creatures met only during the milestone events */
-const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya'];
-const ZTOTAL=CREA.length+EXTRA.length;
+const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani'];
+const ZTOTAL=ALLC.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
-let cr=null,crT=5,pops=[];
+let cr=null,crT=5,pops=[],returns=0;
+try{returns=+localStorage.getItem('awa-return')||0}catch(e){}
 let evt=null,pendingEvt=null,seqI=0,nextAt=50;
 function showMet(){$('zukan').textContent='であった生き物 '+met.length+' / '+ZTOTAL}
 showMet();
@@ -142,7 +181,7 @@ function meet(id){
 function crSize(){return Math.max(46,Math.min(72,Math.min(W,H)*.125))}
 function crScale(c){const p=Math.min(1,c.age/.6),k=1.9;return 1+(k+1)*Math.pow(p-1,3)+k*Math.pow(p-1,2)}
 function spawnCreature(){
-  const L=level(),pool=CREA.filter(c=>L>=c.from),fresh=pool.filter(c=>!met.includes(c.id));
+  const L=level(),pool=curCrea().filter(c=>L>=c.from),fresh=pool.filter(c=>!met.includes(c.id));
   const list=(fresh.length&&Math.random()<.6)?fresh:pool,c=list[Math.floor(Math.random()*list.length)];
   const dir=Math.random()<.5?1:-1,S=crSize();
   cr={c,x:W*(.25+Math.random()*.5),y:H*(.38+Math.random()*.3),dir,S,age:0,life:13,tapped:0,ph:Math.random()*6.28,vx:dir*S*.35};
@@ -167,12 +206,15 @@ function happy(){
 }
 function hitCreature(px,py){
   if(!cr||cr.tapped)return false;
-  const sc=Math.max(.3,crScale(cr)),w=cr.c.id==='ryugu'?2.2:1.05;
-  const dx=(px-cr.x)/(cr.S*w*sc+14),dy=(py-cr.y)/(cr.S*.9*sc+14);
+  const sc=Math.max(.3,crScale(cr)),HB={ryugu:[2.2,.9],mitsukuri:[1.7,.8],hourai:[1.5,.8],fringe:[1.2,.8],oni:[1.1,.9],umiera:[.75,1.3],umishida:[1.15,1.1]}[cr.c.id]||[1.05,.9];
+  const cyy=cr.c.id==='umiera'?cr.y-cr.S*.2*sc:cr.y;
+  const dx=(px-cr.x)/(cr.S*HB[0]*sc+14),dy=(py-cyy)/(cr.S*HB[1]*sc+14);
   if(dx*dx+dy*dy>1)return false;
   cr.tapped=.001;score+=3;happy();
   const first=meet(cr.c.id);
   pops.push({x:cr.x,y:cr.y-cr.S*1.3,life:1,txt:'+3'});
+  if(cr.c.pop){pops.push({x:cr.x,y:cr.y-cr.S*.7,life:1.1,txt:cr.c.pop,col:cr.c.scary?'#ffb0a0':'#c8fff0'});
+    if(cr.c.scary)chomp();else if(cr.c.id==='umiera')shimmer();cr.vx*=.3}
   update();
   showToast('<b>'+cr.c.name+(first?'<br>はじめまして！':'')+'</b>'+cr.c.note,3400);
   return true;
@@ -184,7 +226,7 @@ function stepCreature(dt){
     return;
   }
   cr.age+=dt;cr.ph+=dt;
-  if(cr.tapped){cr.tapped+=dt;if(cr.tapped>1.4)cr.vx+=cr.dir*cr.S*4*dt}
+  if(cr.tapped){cr.tapped+=dt;if(cr.tapped>(cr.c.pop?2.2:1.4))cr.vx+=cr.dir*cr.S*4*dt}
   cr.x+=cr.vx*dt;cr.y+=Math.sin(cr.ph*1.3)*cr.S*.25*dt;
   if(cr.age>cr.life||cr.x<-cr.S*4||cr.x>W+cr.S*4)cr=null;
 }
@@ -267,16 +309,199 @@ const DRAW={
     cx.fillStyle='#ff5a6e';
     for(let k=0;k<4;k++){cx.beginPath();cx.ellipse(L-S*.3-k*S*.1,-S*.38-k*S*.12,S*.05,S*.22,-.4-k*.12,0,6.28);cx.fill()}
     eye(L-S*.28,-S*.03,S*.07,t,h);
+  },
+  /* ---- second sea ---- */
+  umiera(S,t,h){            // sea pen: a feather standing on a little bulb; glows when touched
+    const g=crTap>0?Math.max(0,1-crTap/2.4):0;
+    cx.scale(1.3,1.3);cx.rotate(Math.sin(t*1.1)*.07);
+    if(g>0){cx.save();cx.globalCompositeOperation='lighter';
+      const gl=cx.createRadialGradient(0,-S*.25,0,0,-S*.25,S*1.7);gl.addColorStop(0,`rgba(110,255,210,${.5*g})`);gl.addColorStop(1,'rgba(110,255,210,0)');
+      cx.fillStyle=gl;cx.beginPath();cx.arc(0,-S*.25,S*1.7,0,TAU);cx.fill();cx.restore()}
+    cx.fillStyle='#e3a46c';cx.beginPath();cx.ellipse(0,S*.86,S*.15,S*.19,0,0,TAU);cx.fill();
+    cx.fillStyle='rgba(255,220,180,.4)';cx.beginPath();cx.ellipse(-S*.05,S*.8,S*.05,S*.08,0,0,TAU);cx.fill();
+    cx.strokeStyle='#f4e6cc';cx.lineWidth=S*.075;cx.lineCap='round';
+    cx.beginPath();cx.moveTo(0,S*.7);cx.lineTo(0,-S*1.18);cx.stroke();
+    const N=12,leaf=`hsl(${38-g*60},${55+g*30}%,${80+g*8}%)`,dot=g>0?'#e8fff8':'#fff6e4';
+    for(let i=0;i<N;i++){
+      const f=i/(N-1),y=-S*1.05+f*S*1.5,len=S*(.18+.5*Math.sin(Math.pow(f,.8)*Math.PI*.95));
+      for(const sd of[-1,1]){
+        const wv=Math.sin(t*2+i*.6+sd)*.07,ex=sd*len,ey=y-len*.38+wv*S;
+        cx.strokeStyle=leaf;cx.lineWidth=S*.08;cx.beginPath();cx.moveTo(0,y);cx.quadraticCurveTo(ex*.55,y-len*.05,ex,ey);cx.stroke();
+        cx.fillStyle=dot;if(g>0){cx.shadowColor='#7fffd4';cx.shadowBlur=8*g}
+        for(let k=1;k<=4;k++){const q=k/4,qx=ex*q,qy=y+(ey-y)*q*q-S*.035;cx.beginPath();cx.arc(qx,qy,S*.028,0,TAU);cx.fill()}
+        cx.shadowBlur=0;
+      }
+    }
+  },
+  umishida(S,t,h){          // feather star: feathery arms flap to swim
+    const fl=crTap>0&&crTap<1.6;
+    cx.scale(1.35,1.35);
+    cx.strokeStyle='rgba(225,230,240,.7)';cx.lineWidth=Math.max(1,S*.02);cx.lineCap='round';
+    cx.beginPath();
+    for(let k=0;k<7;k++){const a=Math.PI*.25+k*.1;cx.moveTo(0,S*.08);
+      cx.quadraticCurveTo(Math.cos(a)*S*.3-S*.15,S*.3,Math.cos(a)*S*.45-S*.2+Math.sin(t*2+k)*S*.05,S*.42)}
+    cx.stroke();
+    const K=10;
+    for(let k=0;k<K;k++){
+      const a0=-Math.PI+(k+.5)/K*Math.PI,flap=Math.sin(t*(fl?13:3.2)+k*.5)*(fl?.45:.12),dir=a0<-Math.PI/2?-1:1;
+      let x=0,y=0,pts=[[0,0,a0]];
+      for(let j=1;j<=12;j++){const f=j/12,ang=a0+flap*f+dir*f*f*1.6;x+=Math.cos(ang)*S*.1;y+=Math.sin(ang)*S*.1;pts.push([x,y,ang])}
+      cx.strokeStyle='rgba(235,238,245,.6)';cx.lineWidth=1;cx.beginPath();
+      for(let j=2;j<=12;j++){const [qx,qy,ang]=pts[j],pl=S*.11*(1-j/14);
+        for(const sd of[-1,1]){const pa=ang+sd*1.25;cx.moveTo(qx,qy);cx.lineTo(qx+Math.cos(pa)*pl,qy+Math.sin(pa)*pl)}}
+      cx.stroke();
+      cx.strokeStyle=k%2?'#f2f4fa':'#d9dfec';cx.lineWidth=Math.max(1.5,S*.045);cx.beginPath();
+      pts.forEach(([qx,qy],j)=>j?cx.lineTo(qx,qy):cx.moveTo(qx,qy));cx.stroke();
+    }
+    const g=cx.createRadialGradient(-S*.04,-S*.04,1,0,0,S*.16);g.addColorStop(0,'#ffffff');g.addColorStop(1,'#aeb6c8');
+    cx.fillStyle=g;cx.beginPath();cx.ellipse(0,S*.02,S*.16,S*.12,0,0,TAU);cx.fill();
+  },
+  hourai(S,t,h){            // viperfish: fangs too long for its mouth, lights along the belly
+    const op=crTap>0?tapOpen(1.4):.1+Math.sin(t*1.4)*.04,sw=Math.sin(t*4)*S*.08;
+    // tail
+    cx.fillStyle='#1d2238';cx.beginPath();cx.moveTo(-S*1.3,0);cx.lineTo(-S*1.6,-S*.22+sw);cx.lineTo(-S*1.55,sw*.5);cx.lineTo(-S*1.6,S*.22+sw);cx.closePath();cx.fill();
+    // dorsal fin with a long glowing ray
+    cx.strokeStyle='rgba(150,170,210,.6)';cx.lineWidth=1.5;cx.beginPath();cx.moveTo(S*.05,-S*.27);
+    cx.quadraticCurveTo(-S*.2,-S*.9,S*.3+Math.sin(t*1.7)*S*.12,-S*.95);cx.stroke();
+    cx.save();cx.shadowColor='#9ee8ff';cx.shadowBlur=14;cx.fillStyle='#d8f6ff';cx.beginPath();cx.arc(S*.3+Math.sin(t*1.7)*S*.12,-S*.95,S*.045,0,TAU);cx.fill();cx.restore();
+    // body
+    const bg=cx.createLinearGradient(0,-S*.3,0,S*.3);bg.addColorStop(0,'#2b3352');bg.addColorStop(.6,'#151a2c');bg.addColorStop(1,'#3a4a6a');
+    cx.fillStyle=bg;cx.beginPath();cx.moveTo(-S*1.35,0);
+    cx.bezierCurveTo(-S*.8,-S*.18,-S*.1,-S*.34,S*.35,-S*.3);cx.quadraticCurveTo(S*.62,-S*.22,S*.72,-S*.04);
+    cx.lineTo(S*.2,S*.05);cx.bezierCurveTo(S*.05,S*.3,-S*.7,S*.18,-S*.4,S*.16);cx.bezierCurveTo(-S*.8,S*.12,-S*1.1,S*.06,-S*1.35,0);cx.fill();
+    cx.fillStyle='rgba(140,170,230,.12)';cx.beginPath();cx.ellipse(-S*.2,-S*.14,S*.6,S*.06,-.05,0,TAU);cx.fill();
+    // belly lights
+    cx.save();cx.globalCompositeOperation='lighter';
+    for(let i=0;i<9;i++){const x=-S*1.05+i*S*.13,y=S*(.07+.12*Math.sin((i+1)/10*Math.PI)),a=.5+.5*Math.sin(t*3-i*.6);
+      cx.fillStyle=`rgba(120,210,255,${.35+.5*a})`;cx.beginPath();cx.arc(x,y,S*.025,0,TAU);cx.fill()}
+    cx.restore();
+    // open mouth
+    const hx=S*.18,hy=S*.06,ja=op*1.0,ll=S*.6,lx=hx+Math.cos(ja)*ll,ly=hy+Math.sin(ja)*ll;
+    cx.fillStyle='#2a0812';cx.beginPath();cx.moveTo(hx,hy);cx.lineTo(S*.72,-S*.04);cx.lineTo(lx,ly);cx.closePath();cx.fill();
+    // upper fangs (hang down)
+    cx.fillStyle='#f4f6ff';
+    for(const [fx,fl] of [[S*.62,S*.26],[S*.45,S*.14],[S*.33,S*.1]]){const fy=-S*.04+(.72-fx/S)*S*.15;
+      cx.beginPath();cx.moveTo(fx-S*.03,fy);cx.quadraticCurveTo(fx+S*.02,fy+fl*.6,fx-S*.01,fy+fl);cx.lineTo(fx+S*.02,fy);cx.fill()}
+    // lower jaw with the huge fangs that stick up past the head
+    cx.save();cx.translate(hx,hy);cx.rotate(ja);
+    cx.fillStyle='#262d48';cx.beginPath();cx.moveTo(0,-S*.02);cx.lineTo(ll,-S*.03);cx.quadraticCurveTo(ll*.6,S*.14,0,S*.1);cx.closePath();cx.fill();
+    cx.fillStyle='#f4f6ff';
+    for(const [fx,fl] of [[ll*.95,S*.42],[ll*.7,S*.2],[ll*.45,S*.1]]){
+      cx.beginPath();cx.moveTo(fx-S*.035,-S*.02);cx.quadraticCurveTo(fx-S*.04,-fl*.6,fx+S*.03,-fl);cx.lineTo(fx+S*.02,-S*.02);cx.fill()}
+    cx.restore();
+    // big glassy eye
+    const ex=S*.42,ey=-S*.13,er=S*.1;
+    cx.fillStyle='#c8d4ea';cx.beginPath();cx.arc(ex,ey,er,0,TAU);cx.fill();
+    cx.fillStyle='#05060c';cx.beginPath();cx.arc(ex+er*.15,ey,er*(crTap>0?.45:.7),0,TAU);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.85)';cx.beginPath();cx.arc(ex-er*.35,ey-er*.35,er*.22,0,TAU);cx.fill();
+  },
+  oni(S,t,h){               // fangtooth: big head, enormous jagged teeth
+    const op=crTap>0&&crTap<1.5?.35+.6*Math.abs(Math.sin(crTap*13)):.42+Math.sin(t*1.2)*.05,sw=Math.sin(t*5)*S*.08;
+    cx.fillStyle='#2a1c18';cx.beginPath();cx.moveTo(-S*.85,0);cx.lineTo(-S*1.2,-S*.3+sw);cx.lineTo(-S*1.1,sw*.4);cx.lineTo(-S*1.2,S*.3+sw);cx.closePath();cx.fill();
+    cx.beginPath();cx.moveTo(-S*.3,-S*.5);cx.quadraticCurveTo(-S*.6,-S*.62,-S*.8,-S*.2);cx.lineTo(-S*.5,-S*.3);cx.fill();
+    const g=cx.createRadialGradient(S*.15,-S*.3,2,0,0,S*1.1);g.addColorStop(0,'#5a4038');g.addColorStop(1,'#1c1210');
+    cx.fillStyle=g;cx.beginPath();cx.moveTo(-S*.9,0);
+    cx.bezierCurveTo(-S*.6,-S*.4,-S*.1,-S*.72,S*.35,-S*.6);cx.bezierCurveTo(S*.7,-S*.5,S*.8,-S*.2,S*.78,-S*.02);
+    cx.lineTo(S*.78,S*.25);cx.bezierCurveTo(S*.5,S*.62,-S*.2,S*.55,-S*.55,S*.25);cx.quadraticCurveTo(-S*.75,S*.1,-S*.9,0);cx.fill();
+    // bumpy sensory grooves
+    cx.strokeStyle='rgba(150,110,95,.45)';cx.lineWidth=Math.max(1,S*.025);cx.lineCap='round';
+    for(let i=0;i<3;i++){cx.beginPath();cx.arc(S*.2,-S*.05,S*(.32+i*.1),-2.6,-1.3);cx.stroke()}
+    // mouth
+    const mx=S*.55,my=S*.1,mw=S*.32,mh=S*.32*op;
+    cx.fillStyle='#3a0a0e';cx.beginPath();cx.ellipse(mx,my,mw,mh+S*.02,0,0,TAU);cx.fill();
+    cx.fillStyle='#f6efe4';
+    const tooth=(x,y,l,up)=>{cx.beginPath();cx.moveTo(x-S*.035,y);cx.lineTo(x,y+(up?-l:l));cx.lineTo(x+S*.035,y);cx.fill()};
+    for(let i=0;i<6;i++){const f=(i+.5)/6,x=mx-mw*.9+f*mw*1.8,yy=Math.sqrt(Math.max(0,1-Math.pow((x-mx)/mw,2)));
+      tooth(x,my-mh*yy-S*.01,(i===1||i===4?S*.26:S*.1)*(.6+.4*yy),false);
+      tooth(x+S*.03,my+mh*yy+S*.01,(i===2||i===5?S*.3:S*.1)*(.6+.4*yy),true)}
+    // small mean eye
+    const ex=S*.32,ey=-S*.32;
+    cx.fillStyle='#d8c9a8';cx.beginPath();cx.arc(ex,ey,S*.07,0,TAU);cx.fill();
+    cx.fillStyle='#0a0606';cx.beginPath();cx.arc(ex+S*.015,ey+S*.005,S*.04,0,TAU);cx.fill();
+    cx.strokeStyle='#120a08';cx.lineWidth=Math.max(1.5,S*.035);cx.beginPath();cx.moveTo(ex-S*.1,ey-S*.11);cx.lineTo(ex+S*.1,ey-S*.05);cx.stroke();
+  },
+  fringe(S,t,h){            // sarcastic fringehead: small fish that flares an enormous mouth
+    const d=crTap>0?tapOpen(1.6):0,sw=Math.sin(t*5)*S*.08;
+    cx.fillStyle='#8a6a48';cx.beginPath();cx.moveTo(-S*1.0,0);cx.lineTo(-S*1.25,-S*.18+sw);cx.lineTo(-S*1.25,S*.18+sw);cx.closePath();cx.fill();
+    // long dorsal fin with an eyespot
+    cx.fillStyle='rgba(170,130,90,.85)';cx.beginPath();cx.moveTo(-S*.95,-S*.1);
+    for(let i=0;i<=8;i++){const x=-S*.95+i*S*.15;cx.lineTo(x,-S*.3-Math.sin(t*3+i)*S*.03-(i%2)*S*.04)}
+    cx.lineTo(S*.25,-S*.15);cx.closePath();cx.fill();
+    cx.fillStyle='#1c2c5a';cx.beginPath();cx.arc(S*.05,-S*.27,S*.045,0,TAU);cx.fill();
+    cx.fillStyle='#ffd54a';cx.beginPath();cx.arc(S*.05,-S*.27,S*.02,0,TAU);cx.fill();
+    // body
+    const g=cx.createLinearGradient(0,-S*.22,0,S*.22);g.addColorStop(0,'#b08a5e');g.addColorStop(1,'#e6d1a8');
+    cx.fillStyle=g;cx.beginPath();cx.moveTo(-S*1.0,0);cx.bezierCurveTo(-S*.5,-S*.2,S*.1,-S*.24,S*.45,-S*.14);
+    cx.quadraticCurveTo(S*.6,-S*.02,S*.48,S*.1);cx.bezierCurveTo(S*.1,S*.22,-S*.5,S*.18,-S*1.0,0);cx.fill();
+    cx.fillStyle='rgba(90,60,35,.45)';
+    for(let i=0;i<6;i++){cx.beginPath();cx.ellipse(-S*.8+i*S*.22,-S*.04+(i%2)*S*.06,S*.07,S*.04,0,0,TAU);cx.fill()}
+    // the flared mouth
+    const mx=S*.5+d*S*.15,my=S*.02,rx=S*(.08+.28*d),ry=S*(.06+.78*d);
+    if(d>.02){
+      cx.fillStyle='#ffcf3a';cx.beginPath();cx.ellipse(mx,my,rx,ry,0,0,TAU);cx.fill();
+      cx.fillStyle='#ffcf3a';for(let i=0;i<14;i++){const a=i/14*TAU;cx.beginPath();cx.arc(mx+Math.cos(a)*rx,my+Math.sin(a)*ry,S*.06*d,0,TAU);cx.fill()}
+      cx.fillStyle='#1d3fa8';cx.beginPath();cx.ellipse(mx,my,rx*.82,ry*.86,0,0,TAU);cx.fill();
+      cx.fillStyle='#d23a3a';cx.beginPath();cx.ellipse(mx,my,rx*.66,ry*.74,0,0,TAU);cx.fill();
+      cx.fillStyle='#2a0608';cx.beginPath();cx.ellipse(mx+rx*.05,my,rx*.48,ry*.6,0,0,TAU);cx.fill();
+      cx.fillStyle='#fff';for(let i=0;i<10;i++){const a=i/10*TAU;cx.beginPath();cx.arc(mx+rx*.05+Math.cos(a)*rx*.5,my+Math.sin(a)*ry*.62,S*.02,0,TAU);cx.fill()}
+    }else{cx.strokeStyle='#5a3a22';cx.lineWidth=Math.max(1.5,S*.03);cx.beginPath();cx.moveTo(S*.52,S*.02);cx.quadraticCurveTo(S*.4,S*.08,S*.3,S*.05);cx.stroke()}
+    // fringes above the eye
+    const ex=S*.3,ey=-S*.1;
+    cx.strokeStyle='#7a5a38';cx.lineWidth=Math.max(1,S*.025);
+    cx.beginPath();
+    for(let i=0;i<4;i++){cx.moveTo(ex-S*.04+i*S*.03,ey-S*.07);cx.lineTo(ex-S*.06+i*S*.04+Math.sin(t*4+i)*S*.02,ey-S*.18)}
+    cx.stroke();
+    // googly eye
+    cx.fillStyle='#fff';cx.beginPath();cx.arc(ex,ey,S*.08,0,TAU);cx.fill();
+    cx.fillStyle='#14100c';cx.beginPath();cx.arc(ex+S*.02+Math.sin(t*.7)*S*.02,ey+(d>0?-S*.03:0),S*.045,0,TAU);cx.fill();
+  },
+  mitsukuri(S,t,h){         // goblin shark: pink, flat snout; the jaws shoot out like a drawer
+    const d=crTap>0?tapOpen(1.3):0,sw=Math.sin(t*3)*S*.1;
+    // tail (long upper lobe)
+    cx.fillStyle='#d48d98';cx.beginPath();cx.moveTo(-S*1.15,-S*.02);cx.lineTo(-S*1.9,-S*.38+sw);cx.lineTo(-S*1.75,-S*.1+sw*.6);cx.lineTo(-S*1.4,S*.14+sw*.3);cx.closePath();cx.fill();
+    // fins
+    cx.fillStyle='#cf8590';
+    cx.beginPath();cx.moveTo(-S*.1,-S*.24);cx.quadraticCurveTo(-S*.3,-S*.5,-S*.45,-S*.22);cx.fill();
+    cx.beginPath();cx.moveTo(-S*.75,-S*.12);cx.quadraticCurveTo(-S*.9,-S*.32,-S*1.0,-S*.08);cx.fill();
+    cx.beginPath();cx.moveTo(S*.1,S*.18);cx.quadraticCurveTo(-S*.05,S*.5,-S*.3,S*.45);cx.quadraticCurveTo(-S*.1,S*.28,-S*.05,S*.18);cx.fill();
+    // jaws (behind the head), shooting forward
+    const jx=S*.35+d*S*.8,jy=S*.12+d*S*.14;
+    if(d>.02){cx.fillStyle='rgba(225,140,150,.85)';cx.beginPath();cx.moveTo(S*.2,S*.05);cx.lineTo(jx,jy-S*.08);cx.lineTo(jx,jy+S*.1);cx.lineTo(S*.15,S*.2);cx.closePath();cx.fill()}
+    const jo=.15+d*.55;
+    cx.save();cx.translate(jx,jy);
+    cx.fillStyle='#3a0c14';cx.beginPath();cx.moveTo(-S*.02,0);cx.lineTo(S*.3,-S*.1*jo-S*.02);cx.lineTo(S*.3,S*.12*jo+S*.02);cx.closePath();cx.fill();
+    cx.fillStyle='#f08a9a';
+    cx.beginPath();cx.moveTo(-S*.04,-S*.04);cx.quadraticCurveTo(S*.15,-S*.16*jo-S*.06,S*.32,-S*.1*jo-S*.02);cx.lineTo(S*.3,-S*.1*jo+S*.01);cx.quadraticCurveTo(S*.12,-S*.05*jo,-S*.04,0);cx.fill();
+    cx.beginPath();cx.moveTo(-S*.04,S*.04);cx.quadraticCurveTo(S*.15,S*.18*jo+S*.06,S*.32,S*.12*jo+S*.02);cx.lineTo(S*.3,S*.12*jo-S*.01);cx.quadraticCurveTo(S*.12,S*.06*jo,-S*.04,0);cx.fill();
+    cx.strokeStyle='#fbfbf4';cx.lineWidth=Math.max(1,S*.018);cx.beginPath();
+    for(let i=0;i<6;i++){const x=S*(.04+i*.045);
+      const uy=-S*.1*jo*(x/(S*.3))-S*.01;cx.moveTo(x,uy);cx.lineTo(x+S*.01,uy+S*.07);
+      const by=S*.12*jo*(x/(S*.3))+S*.01;cx.moveTo(x,by);cx.lineTo(x+S*.01,by-S*.07)}
+    cx.stroke();cx.restore();
+    // body
+    const g=cx.createLinearGradient(0,-S*.3,0,S*.28);g.addColorStop(0,'#f2b9c0');g.addColorStop(.6,'#e49aa6');g.addColorStop(1,'#f7d4d8');
+    cx.fillStyle=g;cx.beginPath();cx.moveTo(-S*1.2,0);
+    cx.bezierCurveTo(-S*.7,-S*.26,S*.1,-S*.32,S*.45,-S*.18);
+    cx.lineTo(S*1.15,-S*.12);cx.quadraticCurveTo(S*1.2,-S*.06,S*1.1,-S*.04);   // the long flat snout
+    cx.lineTo(S*.45,-S*.02);cx.quadraticCurveTo(S*.3,S*.2,S*.0,S*.22);
+    cx.bezierCurveTo(-S*.5,S*.24,-S*.9,S*.12,-S*1.2,0);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.25)';cx.beginPath();cx.ellipse(S*.75,-S*.12,S*.3,S*.025,-.05,0,TAU);cx.fill();
+    cx.strokeStyle='rgba(160,70,85,.5)';cx.lineWidth=Math.max(1,S*.02);
+    for(let i=0;i<5;i++){cx.beginPath();cx.moveTo(S*(.08-i*.06),-S*.1);cx.quadraticCurveTo(S*(.05-i*.06),S*.0,S*(.08-i*.06),S*.1);cx.stroke()}
+    // small dark eye
+    cx.fillStyle='#1a0a10';cx.beginPath();cx.arc(S*.42,-S*.12,S*.045,0,TAU);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.7)';cx.beginPath();cx.arc(S*.41,-S*.135,S*.014,0,TAU);cx.fill();
   }
+
 };
 function drawCreature(t){
   if(!cr)return;
   const c=cr,S=c.S,sc=crScale(c),a=Math.max(0,Math.min(1,(c.life-c.age)/1.5));
-  const wig=c.tapped&&c.tapped<1.4?Math.sin(c.tapped*22)*.18:0;
+  const wig=c.tapped&&c.tapped<1.4?Math.sin(c.tapped*22)*(c.c.pop?.05:.18):0;
   cx.save();cx.globalAlpha=a;cx.translate(c.x,c.y);cx.rotate(wig);cx.scale(sc*c.dir,sc);
   const hg=cx.createRadialGradient(0,0,0,0,0,S*1.9);hg.addColorStop(0,'rgba(170,240,255,.2)');hg.addColorStop(1,'rgba(170,240,255,0)');
   cx.fillStyle=hg;cx.beginPath();cx.arc(0,0,S*1.9,0,6.28);cx.fill();
-  DRAW[c.c.id](S,t,!!c.tapped);
+  crTap=c.tapped||0;DRAW[c.c.id](S,t,!!c.tapped);crTap=0;
   cx.restore();
 }
 function drawPops(dt){
@@ -369,17 +594,19 @@ $('pause').onclick=e=>{
    the next round number at least 20 points away.
    ===================================================================== */
 const MS=50;
-const SEQ=['whale','vent','deme','glow','blob','lily','squid','hoya','vent','treasure'];
-const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱',deme:'デメニギス',lily:'ウミユリの森',blob:'ブロブフィッシュ',hoya:'オオグチボヤ'};
+const SEQ1=['whale','vent','deme','glow','blob','lily','squid','hoya','vent','treasure'];
+const SEQ2=['whale','vent','deme','bone','glow','blob','lily','squid','hoya','treasure'];   // 2nd sea: the bone forest
+let SEQ=seaB()?SEQ2:SEQ1;
+const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱',deme:'デメニギス',lily:'ウミユリの森',blob:'ブロブフィッシュ',hoya:'オオグチボヤ',bone:'クジラの骨の森'};
 let shrimps=[],plume=[],plank=[],whale=null;
 function ease(x){x=Math.max(0,Math.min(1,x));return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
 
 function startEvent(kind){
-  evt={kind,t:0,n:0,len:{vent:24,squid:20,treasure:22,deme:20,lily:26,blob:20,hoya:24}[kind]||16,arrived:false,ending:false,hp:0,shown:-1};
+  evt={kind,t:0,n:0,len:{vent:24,squid:20,treasure:22,deme:20,lily:26,blob:20,hoya:24,bone:28}[kind]||16,arrived:false,ending:false,hp:0,shown:-1};
   const ev=$('ev');ev.classList.toggle('hot',kind==='vent'||kind==='treasure');
   $('evName').textContent=NAMES[kind];
-  const LB={vent:['エビ','ぴき'],squid:['タッチ','回'],treasure:['たから','こ'],lily:['タッチ','回'],blob:['つんつん','回'],hoya:['えさ','こ']}[kind]||['泡','こ'];
-  $('evLbl').textContent=LB[0];$('evU').textContent=LB[1];
+  const LB={vent:['エビ','ぴき'],squid:['タッチ','回'],treasure:['たから','こ'],lily:['タッチ','回'],blob:['つんつん','回'],hoya:['えさ','こ'],bone:['ハナムシ','ひき']}[kind]||['泡','こ'];
+  $('evLbl').textContent=kind==='vent'&&seaB()?'エビ・カニ':LB[0];$('evU').textContent=LB[1];
   $('evn').textContent=0;ev.hidden=false;
   if(kind==='vent'){
     showToast('<b>スーッ…</b>海の底のさらに下へ、沈んでいきます',2400);rumble();
@@ -404,6 +631,9 @@ function startEvent(kind){
   }else if(kind==='hoya'){
     startHoya();const first=meet('hoya');rumble();
     showToast('<b>オオグチボヤ'+(first?'<br>はじめまして！':'')+'</b>大きな口をあけて、えさを待つホヤ。ただようえさにふれると、口のほうへ泳いでいきます',3600);
+  }else if(kind==='bone'){
+    startBone();const first=meet('honekui');rumble();
+    showToast('<b>クジラの骨の森'+(first?'<br>はじめまして！':'')+'</b>海の底に、大きなクジラの骨…。びっしりおおう赤いつぶつぶは、骨を食べるホネクイハナムシ。ふれてみて',4200);
   }else if(kind==='treasure'){
     startTreasure();
     showToast('<b>海底の宝箱</b>宝箱が沈んできました。'+NEED+' 回たたくと、ひらきます',3200);
@@ -414,7 +644,7 @@ function startEvent(kind){
   update();
 }
 function endEvent(){
-  const k=evt.kind,n=evt.n;evt=null;whale=null;squid=null;chest=null;deme=null;lilies=[];swimmers=[];blob=null;hoyas=[];hfood=[];
+  const k=evt.kind,n=evt.n;evt=null;whale=null;squid=null;chest=null;deme=null;lilies=[];swimmers=[];blob=null;hoyas=[];hfood=[];bone=null;worms=[];hags=[];
   $('ev').hidden=true;nextAt=Math.ceil((score+20)/MS)*MS;spawnT=.4;
   for(const s of shrimps)if(s.mode!=='flip')flee(s);
   const msg={whale:'<b>'+n+' こ</b>クジラの泡をはじきました',glow:'<b>'+n+' こ</b>光る泡をはじきました',
@@ -423,6 +653,7 @@ function endEvent(){
     deme:'<b>'+n+' こ</b>デメニギスといっしょに泡をはじきました。緑の目で、ずっと見ていました',
     lily:'<b>'+n+' 回</b>ウミユリにふれました。森はまた静かに揺れています',
     blob:'<b>'+n+' 回</b>ブロブフィッシュをつつきました。むすっとした顔のまま、ちょっと楽しそうでした',
+    bone:'<b>'+n+' ひき</b>のホネクイハナムシが引っこみました。骨の森は、また静かに赤くゆれています',
     hoya:'<b>えさ '+n+' こ</b>オオグチボヤが食べました。おなかいっぱいで、口をとじて休んでいます'}[k];
   if(msg)showToast(msg,3000);
   happy();update();
@@ -442,6 +673,7 @@ function stepEvent(dt){
   else if(evt.kind==='lily')stepLily(dt);
   else if(evt.kind==='blob')stepBlob(dt);
   else if(evt.kind==='hoya')stepHoya(dt);
+  else if(evt.kind==='bone')stepBone(dt);
   else stepGlow(dt);
   if(evt&&evt.t>=evt.len)endEvent();
 }
@@ -450,7 +682,34 @@ function stepEvent(dt){
 const SINK=2.8,RISE=2.6;
 const VENTS=[{fx:.2,hf:.62,w:26},{fx:.53,hf:1,w:34},{fx:.83,hf:.72,w:24}].map(v=>{
   v.jl=Array.from({length:9},()=>Math.random()-.5);v.jr=Array.from({length:9},()=>Math.random()-.5);
-  v.cd=0;v.et=0;v.bt=0;return v});
+  v.cd=0;v.et=0;v.bt=0;
+  v.tubes=Array.from({length:11},(_,i)=>{const sd=i%2?1:-1;return{dx:sd*(1.1+Math.random()*1.9),h:28+Math.random()*48,ph:Math.random()*6,out:0,back:0,lean:sd*(.05+Math.random()*.2)}});
+  return v});
+function tubeGeo(v,w){const g=ventGeo(v),sc=vScale(),bx=g.x+w.dx*g.w,by=hillY(bx,vOff())+6,h=w.h*sc;
+  return{bx,by,tx:bx+w.lean*h+Math.sin(performance.now()/1000*1.1+w.ph)*3,ty:by-h,sc}}
+function hitTube(px,py){
+  if(!evt||evt.kind!=='vent'||!evt.arrived||evt.ending)return false;
+  for(const v of VENTS)for(const w of v.tubes){const q=tubeGeo(v,w);
+    if((px-q.tx)**2+(py-q.ty)**2<=(18*q.sc+12)**2||(Math.abs(px-q.bx)<12&&py<=q.by&&py>=q.ty)){
+      let n=0;for(const o of v.tubes){const r=tubeGeo(v,o);if(Math.abs(r.bx-q.bx)<70*q.sc){if(o.out>.5)n++;o.back=evt.t+1.4+Math.random()*.6}}
+      if(n){score+=n;pops.push({x:q.tx,y:q.ty-26,life:.9,txt:'シュポッ +'+n,col:'#ff9a9a'});noise(.18,'bandpass',900,.3);update()}
+      return true}}
+  return false;
+}
+function drawTubes(v,hp){
+  for(const w of v.tubes){const q=tubeGeo(v,w),o=w.out;
+    cx.strokeStyle='#e9e2d2';cx.lineCap='round';cx.lineWidth=6*q.sc;cx.beginPath();cx.moveTo(q.bx,q.by);
+    cx.quadraticCurveTo(q.bx,(q.by+q.ty)/2,q.tx,q.ty);cx.stroke();
+    cx.strokeStyle='rgba(150,135,115,.5)';cx.lineWidth=1;cx.stroke();
+    cx.fillStyle='#d8d0bc';cx.beginPath();cx.ellipse(q.tx,q.ty,3.4*q.sc,1.6*q.sc,0,0,TAU);cx.fill();
+    if(o>.05){const R=11*q.sc*o;
+      cx.fillStyle='#c41e30';cx.beginPath();cx.ellipse(q.tx,q.ty-R*.55,R*.7,R*.75,0,0,TAU);cx.fill();
+      cx.strokeStyle='#ff4a52';cx.lineWidth=1.4*q.sc;cx.beginPath();
+      for(let k=0;k<9;k++){const a=-Math.PI*.95+k/8*Math.PI*.9+Math.sin(performance.now()/700+w.ph+k)*.08;
+        cx.moveTo(q.tx,q.ty-R*.3);cx.quadraticCurveTo(q.tx+Math.cos(a)*R*.6,q.ty-R*.3+Math.sin(a)*R*.9,q.tx+Math.cos(a)*R*1.05,q.ty-R*.3+Math.sin(a)*R*1.15)}
+      cx.stroke()}
+  }
+}
 function vOff(){return(1-(evt&&evt.kind==='vent'?evt.hp:0))*H*.55}
 function hillY(x,off){return H*.78-(Math.sin(x/W*3.1+.4)*.05+Math.sin(x/W*7.3+1)*.015)*H+off}
 function vScale(){return Math.max(.85,Math.min(1.3,Math.min(W,H)/420))}
@@ -461,7 +720,7 @@ function ventGeo(v){
 function spawnShrimp(v,burst){
   const g=ventGeo(v),sc=vScale();
   shrimps.push({x:g.x+(Math.random()-.5)*g.w*.5,y:g.top,vx:(Math.random()-.5)*(burst?300:150),vy:-(170+Math.random()*(burst?280:170)),
-    s:(8+Math.random()*5)*sc,hue:340+Math.random()*35,mode:'jump',ph:Math.random()*6,tx:0,ty:0,spin:0,ang:-1.57});
+    s:(8+Math.random()*5)*sc,hue:340+Math.random()*35,mode:'jump',ph:Math.random()*6,tx:0,ty:0,spin:0,ang:-1.57,kani:seaB()&&Math.random()<.7});
 }
 function ventBubble(v){
   const g=ventGeo(v),r=10+Math.random()*9;
@@ -487,13 +746,16 @@ function stepVent(dt){
     for(const p of bits)p.y-=shift;
   }
   if(!e.arrived&&t>=SINK){
-    e.arrived=true;const first=meet('ebi');
-    showToast('<b>熱水の丘に到着</b>地の底から熱いお湯がわき出し、エビたちがあふれ出てきました。エビや煙突にふれてみて'+(first?'<br>（図鑑に「熱水のエビ」が加わりました）':''),3600);
+    e.arrived=true;const first=meet('ebi'),ft=meet('tube');let fk=false;if(seaB())fk=meet('kani');
+    const nw=[first&&'熱水のエビ',ft&&'チューブワーム',fk&&'ユノハナガニ'].filter(Boolean);
+    showToast('<b>熱水の丘に到着</b>'+(seaB()?'熱いお湯といっしょに、白いカニたちとエビがあふれ出てきました。':'地の底から熱いお湯がわき出し、エビたちがあふれ出てきました。')+'ふもとの赤い花のようなものはチューブワーム。ふれてみて'+(nw.length?'<br>（図鑑に「'+nw.join('」「')+'」が加わりました）':''),4000);
+    VENTS.forEach(v=>{for(const w of v.tubes){w.out=0;w.back=e.t+.3+Math.random()*1.2}});
     VENTS.forEach(v=>erupt(v,10));
   }
   if(e.arrived&&!e.ending){
     for(const v of VENTS){
       v.cd-=dt;v.et-=dt;v.bt-=dt;
+      for(const w of v.tubes){const tg=t>=w.back?1:0;w.out+=(tg-w.out)*Math.min(1,dt*(tg?2.4:18))}
       if(v.et<=0){v.et=.3+Math.random()*.6;if(shrimps.length<55)spawnShrimp(v,false)}
       if(v.bt<=0){v.bt=.6+Math.random()*1.1;ventBubble(v)}
     }
@@ -501,7 +763,7 @@ function stepVent(dt){
   if(!e.ending&&t>=e.len-RISE){
     e.ending=true;
     for(const s of shrimps)if(s.mode!=='flip')flee(s);
-    showToast('<b>エビ '+e.n+' ぴき</b>と遊びました。ゆっくり浮かびあがります',3000);
+    showToast('<b>'+(seaB()?'エビ・カニ ':'エビ ')+e.n+' ぴき</b>と遊びました。ゆっくり浮かびあがります',3000);
   }
   // hot shimmering water
   if(hp>0)for(const v of VENTS){if(Math.random()<dt*22){const g=ventGeo(v);
@@ -534,7 +796,7 @@ function hitShrimp(px,py){
       s.mode='flip';s.spin=0;s.vy=-240;s.vx*=.3;s.flipDir=Math.cos(s.ang)>=0?-1:1;
       score+=1;evt.n++;$('evn').textContent=evt.n;blip();
       for(let k=0;k<8;k++){const a=Math.random()*TAU,v=40+Math.random()*80;bits.push({x:s.x,y:s.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:1+Math.random()*2,life:.8,col:'#ffd0dc'})}
-      pops.push({x:s.x,y:s.y-22,life:.8,txt:'ピョン',col:'#ffd0dc'});
+      pops.push({x:s.x,y:s.y-22,life:.8,txt:s.kani?'カシャ':'ピョン',col:s.kani?'#f4f0e6':'#ffd0dc'});
       update();return true;
     }
   }
@@ -567,6 +829,7 @@ function drawVent(t){
   // white bacteria mats along the ridge
   cx.fillStyle='rgba(240,240,225,.35)';
   for(let i=0;i<26;i++){const x=(i*97.3%1000)/1000*W,y=hillY(x,off)+4+(i*13%9);cx.beginPath();cx.ellipse(x,y,6+(i%4)*3,2,0,0,TAU);cx.fill()}
+  for(const v of VENTS)drawTubes(v,hp);
   // chimneys
   for(const v of VENTS){const g=ventGeo(v),N=8;
     const cg=cx.createLinearGradient(g.x-g.w,0,g.x+g.w,0);cg.addColorStop(0,'#181216');cg.addColorStop(.5,'#3a2a2c');cg.addColorStop(1,'#120d10');
@@ -593,7 +856,24 @@ function drawPlume(){
     cx.fillStyle=`rgba(255,235,210,${.05*a})`;cx.beginPath();cx.arc(p.x,p.y,p.r*.45,0,TAU);cx.fill()}
   cx.restore();
 }
+function drawCrab(s){
+  const S=s.s*1.15,wk=Math.sin(s.ph*14)*.3;
+  cx.save();cx.translate(s.x,s.y);
+  if(s.mode==='flip')cx.rotate(s.spin/.7*TAU*s.flipDir);else cx.rotate(Math.max(-.5,Math.min(.5,s.vx/400)));
+  cx.strokeStyle='#e6e0d2';cx.lineCap='round';cx.lineWidth=Math.max(1.2,S*.16);
+  for(const sd of[-1,1])for(let i=0;i<3;i++){const bx=sd*S*.45,by=S*(-.05+i*.18),k=(i%2?wk:-wk);
+    cx.beginPath();cx.moveTo(bx,by);cx.lineTo(sd*S*(1.0+i*.05),by-S*.3+k*S*.3);cx.lineTo(sd*S*(1.25+i*.08),by+S*.35+k*S*.2);cx.stroke()}
+  for(const sd of[-1,1]){cx.beginPath();cx.moveTo(sd*S*.4,-S*.25);cx.lineTo(sd*S*.85,-S*.7);cx.stroke();
+    cx.fillStyle='#f2ece0';cx.beginPath();cx.ellipse(sd*S*.95,-S*.85,S*.3,S*.2,sd*.6,0,TAU);cx.fill();
+    cx.strokeStyle='#bfb6a2';cx.lineWidth=1;cx.beginPath();cx.moveTo(sd*S*1.05,-S*.95);cx.lineTo(sd*S*1.2,-S*1.05);cx.stroke();
+    cx.strokeStyle='#e6e0d2';cx.lineWidth=Math.max(1.2,S*.16)}
+  const g=cx.createRadialGradient(-S*.15,-S*.2,1,0,0,S*.7);g.addColorStop(0,'#ffffff');g.addColorStop(1,'#d4ccb8');
+  cx.fillStyle=g;cx.beginPath();cx.ellipse(0,0,S*.62,S*.48,0,0,TAU);cx.fill();
+  cx.fillStyle='#2a1a14';for(const sd of[-1,1]){cx.beginPath();cx.arc(sd*S*.18,-S*.46,S*.07,0,TAU);cx.fill()}
+  cx.restore();
+}
 function drawShrimp(s){
+  if(s.kani){drawCrab(s);return}
   const S=s.s,fl=Math.sin(s.ph*(s.mode==='swim'?11:20))*.22;
   let a=s.ang;if(s.mode==='flip')a+=s.spin/.7*TAU*s.flipDir;
   cx.save();cx.translate(s.x,s.y);cx.rotate(a);if(Math.cos(s.ang)<0)cx.scale(1,-1);
@@ -1489,6 +1769,167 @@ function drawHoya(t){
   }
   cx.restore();
 }
+
+/* ---- クジラの骨の森 (2nd sea): a whale skeleton on the floor, covered with countless tiny
+   bone-eating worms that pull in when touched; hagfish slither out of the bones ---- */
+let bone=null,worms=[],hags=[],slime=[];
+function boneFloor(x){return floorY(x)-6}
+function bonePaths(){
+  const b=bone,L=b.L,x0=b.x0,F=boneFloor,out=[];
+  // skull (a low dome, facing left)
+  const sk=[];for(let i=0;i<=24;i++){const f=i/24,x=x0+L*.02+f*L*.26,y=F(x)-H*.012-Math.sin(Math.pow(f,.8)*Math.PI)*H*.085;sk.push([x,y])}
+  out.push({kind:'skull',pts:sk});
+  // lower jaw lying on the sand
+  const jw=[];for(let i=0;i<=16;i++){const f=i/16,x=x0+L*.25-f*L*.27,y=F(x)-H*.012-Math.sin(f*Math.PI)*H*.018;jw.push([x,y])}
+  out.push({kind:'jaw',pts:jw});
+  // spine
+  const sp=[];for(let i=0;i<=30;i++){const f=i/30,x=x0+L*.28+f*L*.7,y=F(x)-H*.03-Math.sin(f*Math.PI)*H*.025+f*H*.01;sp.push([x,y])}
+  out.push({kind:'spine',pts:sp});
+  // fallen ribs arching over the spine
+  for(let r=0;r<8;r++){const s=sp[3+r*2],ex=s[0]+L*(.1+r*.004),hh=H*(.15-r*.008);
+    const pts=[];for(let i=0;i<=18;i++){const f=i/18,cxp=s[0]+L*.035,cyp=s[1]-hh*1.6;
+      const x=(1-f)*(1-f)*s[0]+2*(1-f)*f*cxp+f*f*ex,y=(1-f)*(1-f)*s[1]+2*(1-f)*f*cyp+f*f*F(ex);pts.push([x,y])}
+    out.push({kind:'rib',pts})}
+  return out;
+}
+function startBone(){
+  const L=Math.min(W*.96,600);bone={L,x0:W/2-L/2,auto:4.5,hagT:5,hagN:0,met:false,paths:null};
+  worms=[];hags=[];bone.paths=bonePaths();
+  const sc=Math.max(1,Math.min(W,H)/420);
+  for(const p of bone.paths){const P=p.pts;
+    let acc=0;
+    for(let i=1;i<P.length;i++){const [ax,ay]=P[i-1],[bx,by]=P[i],dx=bx-ax,dy=by-ay,l=Math.hypot(dx,dy)||1;
+      let nx=-dy/l,ny=dx/l;if(ny>0){nx=-nx;ny=-ny}
+      const step=p.kind==='rib'?3.4:4.2;
+    for(acc+=l;acc>=step;acc-=step){const f=Math.random(),x=ax+dx*f,y=ay+dy*f;
+        const rows=p.kind==='spine'||p.kind==='skull'?2:1;
+        for(let k=0;k<rows;k++){const o=k*4+(Math.random()-.5)*2;
+          worms.push({x:x-nx*o,y:y-ny*o,nx:nx+(Math.random()-.5)*.6,ny:ny+(Math.random()-.5)*.3,len:(5+Math.random()*8)*sc,s:sc,
+            ph:Math.random()*6,out:0,grow:.6+Math.random()*2.2,hideAt:-1,back:-1})}}}
+  }
+}
+function retract(cx0,cy0,R,speed,now){
+  let n=0;
+  for(const w of worms){const d=Math.hypot(w.x-cx0,w.y-cy0);if(d>R)continue;
+    if(w.out>.5&&!(now>=w.hideAt&&now<w.back))n++;
+    w.hideAt=now+d/speed;w.back=w.hideAt+1.2+Math.random()*.7}
+  return n;
+}
+function stepBone(dt){
+  const b=bone,e=evt;if(!b)return;const now=e.t,fin=e.t>e.len-2.5;
+  for(const w of worms){
+    const hidden=fin||now<w.grow||(now>=w.hideAt&&now<w.back);
+    w.out+=((hidden?0:1)-w.out)*Math.min(1,dt*(hidden?16:2.2));w.ph+=dt;
+  }
+  // every few seconds a wave runs along the whole skeleton by itself
+  b.auto-=dt;
+  if(b.auto<=0&&!fin&&worms.length){b.auto=4+Math.random()*3;const w=worms[Math.floor(Math.random()*worms.length)];
+    retract(w.x,w.y,W*1.2,260,now);hiss(.18)}
+  b.hagT-=dt;
+  if(b.hagT<=0&&!fin&&hags.length<4){b.hagT=2.5+Math.random()*3;spawnHag();
+    if(!b.met){b.met=true;const first=meet('nuta');
+      showToast('<b>ヌタウナギ'+(first?'<br>はじめまして！':'')+'</b>骨のすきまから、目のない細長い魚がにゅるり…。ふれると、ネバネバを出します',3400)}}
+  for(let i=hags.length-1;i>=0;i--){const h=hags[i];h.ph+=dt;h.cd-=dt;h.fade=Math.min(1,h.fade+dt*.8);
+    if(h.flee||fin){h.sp+=(260-h.sp)*Math.min(1,dt*2);h.a+=angDiff(Math.PI/2,h.a)*Math.min(1,dt*1.5)}
+    else{const dx=h.tx-h.x,dy=h.ty-h.y;if(Math.hypot(dx,dy)<30||Math.random()<dt*.15)pickHag(h);
+      h.a+=angDiff(Math.atan2(dy,dx),h.a)*Math.min(1,dt*1.4)}
+    h.x+=Math.cos(h.a)*h.sp*dt;h.y+=Math.sin(h.a)*h.sp*dt;
+    if(h.y>H+h.L||h.x<-h.L*1.5||h.x>W+h.L*1.5||h.y<-h.L)hags.splice(i,1)}
+}
+function pickHag(h){h.tx=W*(.08+Math.random()*.84);h.ty=H*(.5+Math.random()*.32)}
+function spawnHag(){
+  const w=worms[Math.floor(Math.random()*worms.length)]||{x:W/2,y:H*.8};
+  const h={x:w.x,y:w.y,a:-Math.PI/2+(Math.random()-.5),ph:Math.random()*6,sp:45+Math.random()*25,tx:0,ty:0,flee:0,cd:0,fade:0,
+    L:Math.max(80,Math.min(W,H)*.24)};
+  pickHag(h);hags.push(h);
+  retract(w.x,w.y,60,300,evt.t);
+}
+function hagPts(h){
+  const N=18,seg=h.L/N,c=Math.cos(h.a),s=Math.sin(h.a),pts=[];
+  for(let i=0;i<=N;i++){const f=i/N,wv=Math.sin(h.ph*7-i*.55)*h.L*.07*(f+.25);
+    pts.push([h.x-c*i*seg-s*wv,h.y-s*i*seg+c*wv,f])}
+  return pts;
+}
+function drawHag(h){
+  const p=hagPts(h),L=h.L,Lf=[],Rt=[];
+  for(let i=0;i<p.length;i++){const a=p[Math.max(0,i-1)],b=p[Math.min(p.length-1,i+1)],dx=a[0]-b[0],dy=a[1]-b[1],l=Math.hypot(dx,dy)||1,
+    w=L*.045*(i===0?.75:1-p[i][2]*.55);Lf.push([p[i][0]-dy/l*w,p[i][1]+dx/l*w]);Rt.push([p[i][0]+dy/l*w,p[i][1]-dx/l*w])}
+  cx.save();cx.globalAlpha*=h.fade;
+  cx.fillStyle='#a8878c';cx.beginPath();Lf.forEach((q,i)=>i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1]));
+  cx.arc(p[0][0],p[0][1],L*.034,h.a-Math.PI/2,h.a+Math.PI/2);
+  for(let i=Rt.length-1;i>=0;i--)cx.lineTo(Rt[i][0],Rt[i][1]);cx.closePath();cx.fill();
+  cx.strokeStyle='rgba(240,215,220,.25)';cx.lineWidth=1;cx.beginPath();Lf.forEach((q,i)=>i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1]));cx.stroke();
+  // the row of slime pores along its side
+  cx.fillStyle='rgba(250,240,240,.75)';cx.beginPath();
+  for(let i=2;i<p.length-2;i++){const q=Rt[i];const x=(q[0]*2+p[i][0])/3,y=(q[1]*2+p[i][1])/3;cx.moveTo(x+1.2,y);cx.arc(x,y,1.2,0,TAU)}
+  cx.fill();
+  // barbels and pale eyespots (it has no real eyes)
+  const hx=p[0][0],hy=p[0][1],c=Math.cos(h.a),s=Math.sin(h.a);
+  cx.strokeStyle='#c8a8ac';cx.lineWidth=1.2;cx.beginPath();
+  for(const k of[-1.6,-.6,.6,1.6]){const bx=hx+c*L*.03-s*k*L*.012,by=hy+s*L*.03+c*k*L*.012;cx.moveTo(bx,by);
+    cx.lineTo(bx+c*L*.05-s*k*L*.012+Math.sin(h.ph*9+k)*2,by+s*L*.05+c*k*L*.012)}
+  cx.stroke();
+  cx.fillStyle='rgba(225,200,205,.6)';cx.beginPath();cx.arc(hx-c*L*.06,hy-s*L*.06,L*.012,0,TAU);cx.fill();
+  cx.restore();
+}
+function hitBone(px,py){
+  if(!evt||evt.kind!=='bone'||!bone)return false;
+  for(const h of hags){if(h.flee)continue;const p=hagPts(h);
+    for(let i=0;i<12;i++){if((px-p[i][0])**2+(py-p[i][1])**2<=(h.L*.06+18)**2){
+      h.flee=1;score+=2;slimeBurst(p[i][0],p[i][1]);
+      pops.push({x:p[i][0],y:p[i][1]-26,life:1,txt:'ネバッ +2',col:'#e8f0f2'});update();return true}}}
+  let near=false;for(const w of worms){if((px-w.x)**2+(py-w.y)**2<44*44){near=true;break}}
+  if(!near)return false;
+  const n=retract(px,py,95,380,evt.t);
+  if(n>0){const g=Math.max(1,Math.round(n/8));score+=g;evt.n+=n;$('evn').textContent=evt.n;
+    pops.push({x:px,y:py-30,life:.9,txt:'シュッ +'+g,col:'#ff9a9a'});hiss(.12);update()}
+  return true;
+}
+function slimeBurst(x,y){
+  noise(.5,'lowpass',300,.4);
+  for(let i=0;i<26;i++){const a=Math.random()*TAU,v=20+Math.random()*90;
+    slime.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,r:5+Math.random()*10,life:1.6+Math.random()*.6})}
+}
+function stepSlime(dt){for(let i=slime.length-1;i>=0;i--){const s=slime[i];s.life-=dt*.45;s.x+=s.vx*dt;s.y+=s.vy*dt;
+  s.vx*=.93;s.vy*=.93;s.r+=dt*14;if(s.life<=0)slime.splice(i,1)}}
+function drawSlime(){for(const s of slime){const a=Math.max(0,Math.min(1,s.life));
+  cx.fillStyle=`rgba(225,238,242,${.13*a})`;cx.strokeStyle=`rgba(255,255,255,${.28*a})`;cx.lineWidth=1;
+  cx.beginPath();cx.arc(s.x,s.y,s.r,0,TAU);cx.fill();cx.stroke()}}
+function hiss(v){noise(.3,'highpass',2600,v)}
+function drawBone(t){
+  const e=evt;if(!e||e.kind!=='bone'||!bone)return;
+  const a=Math.max(0,Math.min(1,e.t/1.4,(e.len-e.t)/1.5));if(a<=0)return;
+  cx.save();cx.globalAlpha=a;seaFloor(.55);
+  const vg=cx.createRadialGradient(W/2,H*.75,H*.1,W/2,H*.6,Math.max(W,H)*.8);vg.addColorStop(0,'rgba(60,0,10,0)');vg.addColorStop(1,'rgba(10,0,4,.55)');
+  cx.fillStyle=vg;cx.fillRect(0,0,W,H);
+  // bones
+  const L=bone.L;
+  for(const p of bone.paths){const P=p.pts;
+    if(p.kind==='skull'){cx.fillStyle='#cfc6b0';cx.beginPath();cx.moveTo(P[0][0],boneFloor(P[0][0])+4);P.forEach(q=>cx.lineTo(q[0],q[1]));
+      cx.lineTo(P[P.length-1][0],boneFloor(P[P.length-1][0])+4);cx.closePath();cx.fill();
+      cx.fillStyle='#1a1214';cx.beginPath();cx.ellipse(P[16][0],P[16][1]+H*.03,L*.022,H*.014,0,0,TAU);cx.fill();continue}
+    if(p.kind==='spine'){for(let i=0;i<P.length;i+=2){const [x,y]=P[i];cx.fillStyle='#d6cdb6';rr(x-L*.012,y-H*.008,L*.024,H*.026,3);cx.fill();
+      cx.strokeStyle='#c4baa2';cx.lineWidth=L*.008;cx.beginPath();cx.moveTo(x,y);cx.lineTo(x-L*.006,y-H*.025);cx.stroke()}continue}
+    cx.strokeStyle='#cbc2ab';cx.lineCap='round';cx.lineWidth=p.kind==='jaw'?L*.022:L*.013;
+    cx.beginPath();P.forEach((q,i)=>i?cx.lineTo(q[0],q[1]):cx.moveTo(q[0],q[1]));cx.stroke();
+    cx.strokeStyle='rgba(90,70,60,.35)';cx.lineWidth=1;cx.stroke();
+  }
+  // the worms: stalks, then all the little red plumes at once
+  cx.strokeStyle='rgba(235,200,195,.7)';cx.lineWidth=1;cx.beginPath();
+  for(const w of worms){if(w.out<.05)continue;const l=w.len*w.out,sw=Math.sin(t*2.2+w.ph)*1.6*w.out;
+    w.tx=w.x+w.nx*l+sw;w.ty=w.y+w.ny*l;cx.moveTo(w.x,w.y);cx.lineTo(w.tx,w.ty)}
+  cx.stroke();
+  cx.fillStyle='#5a1418';cx.beginPath();
+  for(const w of worms){cx.moveTo(w.x+1.4*w.s,w.y);cx.arc(w.x,w.y,1.4*w.s,0,TAU)}
+  cx.fill();
+  for(const col of['#c8202e','#ff5a5e']){cx.fillStyle=col;cx.beginPath();
+    for(const w of worms){if(w.out<.25)continue;const r=(col==='#c8202e'?1.9:1.1)*w.s*w.out,o=1.6*w.s*w.out;
+      for(const k of[0,2.1,4.2]){const x=w.tx+Math.cos(k+w.ph*.3)*o,y=w.ty+Math.sin(k+w.ph*.3)*o-o*.5;cx.moveTo(x+r,y);cx.arc(x,y,r,0,TAU)}}
+    cx.fill()}
+  for(const h of hags)drawHag(h);
+  cx.restore();
+}
+
 function chomp(){
   noise(.12,'lowpass',420,.5);
   if(!soundOn||!actx)return;
@@ -1503,8 +1944,7 @@ function chomp(){
    down. Tap it to board, rise past the creatures you met, and arrive
    home at the surface. "もう一度もぐる" starts a fresh dive.
    ===================================================================== */
-let sub=null,parade=[],depthK=null,returns=0;
-try{returns=+localStorage.getItem('awa-return')||0}catch(e){}
+let sub=null,parade=[],depthK=null;
 function subSize(){return Math.min(W*.5,240)}
 function startSub(){
   evt={kind:'sub',t:0,n:0,len:1e9,shown:-1};
@@ -1516,7 +1956,7 @@ function startSub(){
 function setHint(txt){const el=$('hint');if(txt){el.textContent=txt;el.style.opacity=1}else el.style.opacity=0}
 function buildParade(){
   parade=[];let i=0;
-  const list=CREA.filter(c=>met.includes(c.id));
+  const list=curCrea().filter(c=>met.includes(c.id));
   for(const c of list){parade.push({id:c.id,name:c.name,x:i%2?W*.78:W*.22,y:-70-i*170,dir:i%2?-1:1});i++}
   if(met.includes('ebi'))for(let k=0;k<5;k++)parade.push({id:'ebi',x:W*(.15+Math.random()*.7),y:-70-i*170-k*30,ph:Math.random()*6});
 }
@@ -1553,15 +1993,16 @@ function hitSub(px,py){
 function showEnd(){
   returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
   $('eScore').textContent=score;$('eMet').textContent=met.length+' / '+ZTOTAL;$('eRet').textContent=returns+' 回目';
+  $('eNext').textContent=seaB()?'つぎの海には、前とはちがう生き物たちがすんでいるようです…':'つぎの海では、なつかしい生き物たちが待っています';
   $('endc').classList.add('show');happy();
 }
 function restart(){
   $('endc').classList.remove('show');
   evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;
-  score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];
+  SEQ=seaB()?SEQ2:SEQ1;score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];
   for(let i=0;i<7;i++){spawn();const b=bubbles[bubbles.length-1];b.y=H*(.3+Math.random()*.7);b.born=1}
   $('ev').hidden=true;setHint('');update();
-  showToast('<b>ふたたび海へ</b>泡にふれながら、もう一度もぐっていこう',3000);
+  showToast(seaB()?'<b>'+(returns+1)+' 回目の海へ</b>なんだか前とはちがう気配…。こわい顔の魚や、ふしぎな生き物がいるようです':'<b>ふたたび海へ</b>なつかしい生き物たちの海に、もう一度もぐっていこう',3600);
 }
 function drawParade(t){
   for(const q of parade){
@@ -1645,6 +2086,27 @@ function splash(){noise(1.2,'highpass',900,.25);shimmer()}
 
 $('again').onclick=e=>{e.stopPropagation();restart()};
 
+/* ---- reset the saved records (best score only, or everything) ---- */
+let rKind=null,rWasPaused=false;
+function rOpen(){rWasPaused=paused;paused=true;rKind=null;$('rChoose').hidden=false;$('rConfirm').hidden=true;
+  $('rMsg').innerHTML='どれを消しますか？<br>最高記録 '+best+' ・ 図鑑 '+met.length+' / '+ZTOTAL+' ・ 帰還 '+returns+' 回';$('resetc').classList.add('show')}
+function rClose(){$('resetc').classList.remove('show');paused=rWasPaused;if(!paused)t0=performance.now()}
+function rAsk(kind){rKind=kind;$('rChoose').hidden=true;$('rConfirm').hidden=false;
+  $('rMsg').innerHTML=kind==='best'?'最高記録を 0 にもどします。<br>図鑑や宝はそのままです':'最高記録・図鑑・集めた宝・帰還回数を<br>ぜんぶ消して、1 回目の海からやり直します。<br>もとにはもどせません'}
+function rDo(){
+  const keys=rKind==='best'?['awa-best']:['awa-best','awa-met','awa-takara','awa-return'];
+  for(const k of keys){try{localStorage.removeItem(k)}catch(e){}}
+  best=0;
+  if(rKind==='all'){met=[];takara=0;returns=0;showMet();$('resetc').classList.remove('show');paused=false;$('pause').textContent='ひと休み';
+    restart();showToast('<b>リセットしました</b>まっさらな気持ちで、1 回目の海へ',3000);return}
+  update();rClose();showToast('<b>最高記録をリセットしました</b>',2200);
+}
+$('resetBtn').onclick=e=>{e.stopPropagation();if(!$('endc').classList.contains('show'))rOpen()};
+$('rBest').onclick=e=>{e.stopPropagation();rAsk('best')};
+$('rAll').onclick=e=>{e.stopPropagation();rAsk('all')};
+$('rNo').onclick=$('rBack').onclick=e=>{e.stopPropagation();rClose()};
+$('rYes').onclick=e=>{e.stopPropagation();rDo()};
+
 /* ---- tapping ---- */
 let lastLevel=0,hintGone=false;
 function hit(px,py){
@@ -1653,12 +2115,14 @@ function hit(px,py){
   if(evt&&evt.kind==='glow')plankRing(px,py);
   if(hitCreature(px,py))return;
   if(hitShrimp(px,py))return;
+  if(hitTube(px,py))return;
   if(hitSquid(px,py))return;
   if(hitLoot(px,py))return;
   if(hitChest(px,py))return;
   if(hitLily(px,py))return;
   if(hitBlob(px,py))return;
   if(hitHoya(px,py))return;
+  if(hitBone(px,py))return;
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i],dx=px-b.x,dy=py-b.y;
     if(dx*dx+dy*dy<=(b.r+10)**2){
@@ -1758,7 +2222,7 @@ function frame(now){
   const c=cfg(),t=now/1000;
   stepEvent(dt);
   spawnT-=dt;
-  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily'||evt.kind==='blob'||evt.kind==='hoya')){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
+  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily'||evt.kind==='blob'||evt.kind==='hoya'||evt.kind==='bone')){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
   for(const m of motes){m.y-=m.v*dt;if(m.y<0)m.y+=1}
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i];b.born=Math.min(1,b.born+dt*2.5);
@@ -1770,16 +2234,17 @@ function frame(now){
     if(!p.ring){p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.94;p.vy=p.vy*.94-30*dt}
     if(p.life<=0)bits.splice(i,1);
   }
-  stepShrimps(dt);stepSwimmers(dt);stepPlume(dt);stepPlank(dt);stepInk(dt);stepLoot(dt);
+  stepShrimps(dt);stepSwimmers(dt);stepPlume(dt);stepPlank(dt);stepInk(dt);stepLoot(dt);stepSlime(dt);
   water();
   drawVent(t);drawPlume();
   drawSquidBody(t);
   drawWhale(t);drawDeme(t);
   stepCreature(dt);drawCreature(t);
   drawGlow();
-  drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawTents(t);
+  drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawBone(t);drawTents(t);
   drawParade(t);drawSurface(t);drawSub(t);
   for(const b of bubbles)drawBubble(b);
+  drawSlime();
   for(const s of shrimps)drawShrimp(s);
   drawLoot();drawInk();
   for(const p of bits){
@@ -1794,8 +2259,11 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 update();
+if(seaB())setTimeout(()=>{if(!evt&&!paused)showToast('<b>'+(returns+1)+' 回目の海</b>深くもぐると、前とはちがう生き物たちに会えます',3200)},1200);
 requestAnimationFrame(frame);
 })();
 </script>
 </body>
 </html>
+
+</body></html>
