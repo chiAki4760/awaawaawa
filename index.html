@@ -159,13 +159,37 @@ const CREA2=[
  {id:'oni',name:'オニキンメ',from:5,note:'体のわりにとても大きな、ギザギザのキバ。口をとじると、キバは頭のくぼみにおさまります',pop:'ガチガチ',scary:1},
  {id:'mitsukuri',name:'ミツクリザメ',from:6,note:'ピンク色の深海のサメ。えものを見つけると、あごが引き出しのように前へ飛び出します',pop:'ガシャッ',scary:1}
 ];
-const ALLC=CREA.concat(CREA2);
-function seaB(){return returns%2===1}            // 2nd, 4th, ... dive
-function curCrea(){return seaB()?CREA2:CREA}
+/* 3rd sea: the frozen Antarctic deep */
+const CREA3=[
+ {id:'umigumo',name:'ダーリアウミグモ',from:3,note:'南極の海の、手のひらより大きいウミグモ。体はとても小さく、長い脚ばかり',pop:'わしゃっ'},
+ {id:'koori',name:'コオリウオ',from:3,note:'血が赤くない、すき通った魚。冷たい南極の海でくらします',pop:'すけっ'},
+ {id:'clione',name:'ハダカカメガイ（クリオネ）',from:4,note:'天使のような姿。でも、えものを見つけると頭がひらいて触手が出てきます',pop:'くぱっ',scary:1},
+ {id:'hozuki',name:'ダイオウホウズキイカ',from:5,note:'南極の深海の巨大イカ。目は動物の中でいちばん大きいといわれます',pop:'ギョロッ',scary:1}
+];
+/* 4th sea: the lake at the bottom of the sea */
+const CREA4=[
+ {id:'taru',name:'オオタルマワシ',from:3,note:'すき通ったタルの中にすむ小さな生き物。タルを押しながら泳ぎます',pop:'ぐるん'},
+ {id:'yurei',name:'ユウレイイカ',from:3,note:'体がすき通った、ゆうれいのようなイカ。長い腕の先が光ります',pop:'ぼうっ'},
+ {id:'jumonji',name:'ジュウモンジダコ',from:4,note:'耳のようなヒレで泳ぐタコ。かさを風船のようにふくらませます',pop:'ふわっ'},
+ {id:'fukuro',name:'フクロウナギ',from:5,note:'体のわりに、口がとても大きなウナギ。口を袋のようにふくらませて、えものをまるのみ',pop:'ガバァ',scary:1}
+];
+/* 5th sea: the deepest trench */
+const CREA5=[
+ {id:'kusauo',name:'シンカイクサウオ',from:3,note:'水深8000mでも暮らせる、ぷるぷるの魚。とても深い海溝にすみます',pop:'ぷるるん'},
+ {id:'senju',name:'センジュナマコ',from:3,note:'ピンク色の、歩くナマコ。海の底をのそのそ歩いて、泥の中のえさを食べます',pop:'のそっ'},
+ {id:'kaikou',name:'カイコウオオソコエビ',from:4,note:'海溝の底にすむ、大きなヨコエビのなかま',pop:'くるっ'},
+ {id:'atolla',name:'ムラサキカムリクラゲ',from:5,note:'おそわれると、ふちの光をくるくる回して、まわりに知らせるクラゲ',pop:'ピカピカ'}
+];
+const CREAS=[CREA,CREA2,CREA3,CREA4,CREA5];
+const ALLC=[].concat(...CREAS);
+const SEANAMES=['はじまりの海','こわい顔の海','凍える南極の海','海の底の湖','いちばん深い海溝'];
+function seaN(){return((returns%5)+5)%5}
+function seaB(){return seaN()===1}
+function curCrea(){return CREAS[seaN()]}
 let crTap=0;
 function tapOpen(hold){if(crTap<=0)return 0;return Math.min(1,crTap/.18)*(crTap>hold?Math.max(0,1-(crTap-hold)/.35):1)}
 /* creatures met only during the milestone events */
-const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani'];
+const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi'];
 const ZTOTAL=ALLC.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
 let cr=null,crT=5,pops=[],returns=0;
@@ -206,7 +230,7 @@ function happy(){
 }
 function hitCreature(px,py){
   if(!cr||cr.tapped)return false;
-  const sc=Math.max(.3,crScale(cr)),HB={ryugu:[2.2,.9],mitsukuri:[1.7,.8],hourai:[1.5,.8],fringe:[1.2,.8],oni:[1.1,.9],umiera:[.75,1.3],umishida:[1.15,1.1]}[cr.c.id]||[1.05,.9];
+  const sc=Math.max(.3,crScale(cr)),HB={ryugu:[2.2,.9],mitsukuri:[1.7,.8],hourai:[1.5,.8],fringe:[1.2,.8],oni:[1.1,.9],umiera:[.75,1.3],umishida:[1.15,1.1],umigumo:[1.3,.9],koori:[1.5,.7],clione:[.6,1.1],hozuki:[1.6,.9],taru:[.9,1],yurei:[1.4,.9],jumonji:[1.1,1],fukuro:[1.5,.9],kusauo:[1.3,.8],senju:[1.2,.9],kaikou:[1.2,.8],atolla:[1,1.1]}[cr.c.id]||[1.05,.9];
   const cyy=cr.c.id==='umiera'?cr.y-cr.S*.2*sc:cr.y;
   const dx=(px-cr.x)/(cr.S*HB[0]*sc+14),dy=(py-cyy)/(cr.S*HB[1]*sc+14);
   if(dx*dx+dy*dy>1)return false;
@@ -491,7 +515,206 @@ const DRAW={
     // small dark eye
     cx.fillStyle='#1a0a10';cx.beginPath();cx.arc(S*.42,-S*.12,S*.045,0,TAU);cx.fill();
     cx.fillStyle='rgba(255,255,255,.7)';cx.beginPath();cx.arc(S*.41,-S*.135,S*.014,0,TAU);cx.fill();
+  },
+  /* ---- 3rd sea ---- */
+  umigumo(S,t,h){           // giant sea spider: a tiny body on eight long jointed legs
+    const c=crTap>0?tapOpen(1.5):0;
+    cx.lineCap='round';cx.lineJoin='round';
+    for(let k=0;k<8;k++){
+      const bx=S*(-.12+(k%4)*.08),walk=Math.sin(t*3+k*1.3)*S*.06;
+      const tx=S*(-1.45+k*.41)*(1-c*.7),ty=S*(.75-c*.45)+(k%2?walk:-walk);
+      const kx=bx+(tx-bx)*.45,ky=-S*(.55+.12*Math.abs(k-3.5)/3.5)*(1-c*.2)-c*S*.2;
+      cx.strokeStyle='#c8552e';cx.lineWidth=S*.06;cx.beginPath();cx.moveTo(bx,0);cx.lineTo(kx,ky);cx.lineTo(tx,ty);cx.stroke();
+      cx.strokeStyle='rgba(255,190,150,.5)';cx.lineWidth=S*.02;cx.beginPath();cx.moveTo(bx,-S*.01);cx.lineTo(kx,ky-S*.01);cx.stroke();
+      cx.fillStyle='#e07a4a';cx.beginPath();cx.arc(kx,ky,S*.045,0,TAU);cx.fill();
+    }
+    cx.fillStyle='#d8663a';cx.beginPath();cx.ellipse(0,0,S*.24,S*.1,0,0,TAU);cx.fill();
+    cx.beginPath();cx.ellipse(S*.3,-S*.02,S*.1,S*.05,-.2,0,TAU);cx.fill();   // proboscis
+    cx.fillStyle='#2a0e06';cx.beginPath();cx.arc(S*.14,-S*.1,S*.025,0,TAU);cx.arc(S*.08,-S*.1,S*.025,0,TAU);cx.fill();
+  },
+  koori(S,t,h){             // icefish: pale, see-through, long flat snout
+    const c=crTap>0?Math.max(0,1-crTap/2.4):0,sw=Math.sin(t*3)*S*.07;
+    cx.save();cx.globalAlpha*=1-.45*c;
+    cx.fillStyle='rgba(225,235,240,.7)';
+    cx.beginPath();cx.moveTo(-S*1.15,0);cx.lineTo(-S*1.45,-S*.22+sw);cx.lineTo(-S*1.45,S*.22+sw);cx.closePath();cx.fill();
+    cx.beginPath();cx.moveTo(-S*.2,-S*.2);cx.quadraticCurveTo(-S*.6,-S*.55,-S*1.0,-S*.12);cx.fill();
+    cx.beginPath();cx.moveTo(S*.15,-S*.22);cx.quadraticCurveTo(S*.05,-S*.6,-S*.15,-S*.22);cx.fill();
+    const g=cx.createLinearGradient(0,-S*.25,0,S*.22);g.addColorStop(0,'rgba(240,246,250,.92)');g.addColorStop(1,'rgba(200,215,225,.85)');
+    cx.fillStyle=g;cx.beginPath();cx.moveTo(-S*1.15,0);cx.bezierCurveTo(-S*.6,-S*.22,S*.1,-S*.26,S*.45,-S*.16);
+    cx.lineTo(S*1.05,-S*.07);cx.quadraticCurveTo(S*1.12,-S*.02,S*1.0,S*.02);cx.lineTo(S*.45,S*.08);
+    cx.bezierCurveTo(S*.1,S*.22,-S*.6,S*.16,-S*1.15,0);cx.fill();
+    cx.restore();
+    // see-through insides: pale gills and a clear heart
+    cx.strokeStyle=`rgba(255,255,255,${.25+.55*c})`;cx.lineWidth=1.2;
+    for(let i=0;i<9;i++){const x=-S*.9+i*S*.15;cx.beginPath();cx.moveTo(x,-S*.12);cx.lineTo(x+S*.04,S*.1);cx.stroke()}
+    cx.strokeStyle=`rgba(255,240,240,${.3+.5*c})`;cx.beginPath();cx.moveTo(S*.25,S*.02);cx.lineTo(-S*.9,0);cx.stroke();
+    cx.fillStyle=`rgba(255,235,235,${.2+.5*c})`;cx.beginPath();cx.arc(S*.25,S*.04,S*.06,0,TAU);cx.fill();
+    cx.fillStyle='#1c2a36';cx.beginPath();cx.arc(S*.42,-S*.08,S*.075,0,TAU);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.85)';cx.beginPath();cx.arc(S*.4,-S*.1,S*.022,0,TAU);cx.fill();
+  },
+  clione(S,t,h){            // sea angel: flapping wings; the head opens into hooks when it hunts
+    const c=crTap>0?tapOpen(1.6):0,fl=Math.sin(t*(c>0?7:4));
+    cx.rotate(-Math.PI/2*.12);cx.scale(1.3,1.3);
+    cx.save();cx.globalCompositeOperation='lighter';
+    const gl=cx.createRadialGradient(0,0,0,0,0,S);gl.addColorStop(0,'rgba(180,230,255,.18)');gl.addColorStop(1,'rgba(180,230,255,0)');
+    cx.fillStyle=gl;cx.beginPath();cx.arc(0,0,S,0,TAU);cx.fill();cx.restore();
+    cx.fillStyle='rgba(225,240,250,.65)';
+    for(const sd of[-1,1]){cx.save();cx.translate(sd*S*.12,-S*.12);cx.rotate(sd*(.4+fl*.45));
+      cx.beginPath();cx.ellipse(sd*S*.28,0,S*.3,S*.12,0,0,TAU);cx.fill();cx.restore()}
+    cx.fillStyle='rgba(235,245,252,.75)';cx.beginPath();cx.moveTo(0,-S*.35);
+    cx.bezierCurveTo(S*.26,-S*.3,S*.2,S*.4,0,S*.62);cx.bezierCurveTo(-S*.2,S*.4,-S*.26,-S*.3,0,-S*.35);cx.fill();
+    cx.fillStyle='#f06a2a';cx.beginPath();cx.ellipse(0,S*.12,S*.09,S*.16,0,0,TAU);cx.fill();
+    if(c>.02){   // buccal cones
+      cx.strokeStyle='#ff7a3a';cx.lineCap='round';cx.lineWidth=S*.045;
+      cx.beginPath();
+      for(let k=0;k<6;k++){const a=-Math.PI/2+(k-2.5)*.38,l=S*.55*c;cx.moveTo(0,-S*.48);
+        cx.quadraticCurveTo(Math.cos(a)*l*.5,-S*.48+Math.sin(a)*l*.6,Math.cos(a)*l+Math.sin(t*9+k)*S*.03,-S*.48+Math.sin(a)*l)}
+      cx.stroke()}
+    cx.fillStyle='rgba(240,248,255,.85)';cx.beginPath();cx.arc(0,-S*.48,S*.17,Math.PI*(1+c*.25),Math.PI*(2-c*.25)+(c>.02?0:Math.PI));cx.fill();
+    cx.fillStyle='#e8603a';cx.beginPath();cx.arc(-S*.06,-S*.5,S*.02,0,TAU);cx.arc(S*.06,-S*.5,S*.02,0,TAU);cx.fill();
+  },
+  hozuki(S,t,h){            // colossal squid: a huge glowing eye and hooked arms
+    const c=crTap>0?tapOpen(1.5):0,sw=Math.sin(t*2)*S*.05;
+    const g=cx.createLinearGradient(0,-S*.4,0,S*.4);g.addColorStop(0,'#b2443e');g.addColorStop(1,'#6a1a20');
+    cx.fillStyle=g;cx.beginPath();cx.moveTo(S*.25,-S*.32);cx.bezierCurveTo(-S*.4,-S*.42,-S*1.2,-S*.25,-S*1.4,0);
+    cx.bezierCurveTo(-S*1.2,S*.25,-S*.4,S*.4,S*.25,S*.32);cx.closePath();cx.fill();
+    cx.fillStyle='#9a3236';cx.beginPath();cx.moveTo(-S*1.1,0);cx.lineTo(-S*1.5,-S*.35+sw);cx.lineTo(-S*1.45,0);cx.lineTo(-S*1.5,S*.35+sw);cx.closePath();cx.fill();
+    cx.fillStyle='#a03a3a';cx.beginPath();cx.ellipse(S*.38,0,S*.26,S*.3,0,0,TAU);cx.fill();
+    cx.strokeStyle='#8a2a30';cx.lineCap='round';
+    for(let k=0;k<8;k++){const a=(k-3.5)*.09*(1+c*1.6),ln=S*(.75+(k%3)*.1);cx.lineWidth=S*.07*(1-Math.abs(k-3.5)*.06);
+      cx.beginPath();cx.moveTo(S*.55,0);cx.quadraticCurveTo(S*.9,Math.sin(a)*ln*.5+Math.sin(t*2+k)*S*.05,S*.55+Math.cos(a)*ln,Math.sin(a)*ln+Math.sin(t*2.4+k)*S*.08);cx.stroke()}
+    cx.fillStyle='#f4e6d0';
+    for(let k=0;k<8;k++){const a=(k-3.5)*.09*(1+c*1.6),ln=S*(.6+(k%3)*.1);cx.beginPath();cx.arc(S*.55+Math.cos(a)*ln,Math.sin(a)*ln+Math.sin(t*2.4+k)*S*.06,S*.018,0,TAU);cx.fill()}
+    const er=S*.17;
+    cx.save();cx.shadowColor='#a8f0ff';cx.shadowBlur=10+c*20;
+    cx.fillStyle='#e8f4f6';cx.beginPath();cx.arc(S*.36,-S*.05,er,0,TAU);cx.fill();cx.restore();
+    cx.fillStyle='#0a0a12';cx.beginPath();cx.arc(S*.38,-S*.05,er*(.55+c*.35),0,TAU);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.8)';cx.beginPath();cx.arc(S*.31,-S*.12,er*.18,0,TAU);cx.fill();
+  },
+  /* ---- 4th sea ---- */
+  taru(S,t,h){              // Phronima: a big-eyed little amphipod pushing its see-through barrel
+    const c=crTap>0?Math.min(1,crTap/1.2):0;
+    cx.save();cx.rotate(c*TAU+Math.sin(t*1.2)*.08);
+    cx.fillStyle='rgba(200,235,250,.18)';cx.strokeStyle='rgba(220,245,255,.65)';cx.lineWidth=1.5;
+    rr(-S*.55,-S*.4,S*1.1,S*.8,S*.25);cx.fill();cx.stroke();
+    cx.strokeStyle='rgba(220,245,255,.3)';cx.lineWidth=1;
+    for(let i=1;i<5;i++){cx.beginPath();cx.moveTo(-S*.55+i*S*.22,-S*.4);cx.lineTo(-S*.55+i*S*.22,S*.4);cx.stroke()}
+    cx.restore();
+    cx.fillStyle='rgba(255,200,180,.75)';
+    for(let i=0;i<5;i++){cx.beginPath();cx.ellipse(S*(.2-i*.13),S*(.05+i*.04),S*.09,S*.07,.3,0,TAU);cx.fill()}
+    cx.strokeStyle='rgba(255,170,150,.8)';cx.lineWidth=S*.03;cx.lineCap='round';
+    cx.beginPath();cx.moveTo(S*.35,S*.05);cx.lineTo(S*.62,-S*.22);cx.moveTo(S*.3,S*.1);cx.lineTo(S*.62,S*.28);cx.stroke();
+    cx.fillStyle='rgba(255,215,200,.85)';cx.beginPath();cx.ellipse(S*.38,-S*.12,S*.17,S*.2,0,0,TAU);cx.fill();
+    cx.fillStyle='#b02838';cx.beginPath();cx.ellipse(S*.42,-S*.2,S*.1,S*.08,0,0,TAU);cx.ellipse(S*.3,-S*.24,S*.08,S*.07,0,0,TAU);cx.fill();
+  },
+  yurei(S,t,h){             // ghost squid: almost invisible, glowing tips on long thin arms
+    const c=crTap>0?Math.max(0,1-crTap/2.2):0;
+    cx.strokeStyle='rgba(220,235,255,.35)';cx.lineWidth=1.2;
+    for(let k=0;k<4;k++){cx.beginPath();cx.moveTo(S*.35,0);
+      for(let i=1;i<=8;i++){const f=i/8;cx.lineTo(S*.35+f*S*1.1,(k-1.5)*S*.12*f+Math.sin(t*2+k+f*3)*S*.08*f)}cx.stroke()}
+    cx.save();cx.globalCompositeOperation='lighter';
+    for(let k=0;k<4;k++){const x=S*1.45,y=(k-1.5)*S*.12+Math.sin(t*2+k+3)*S*.08,b=.5+.5*Math.sin(t*4+k);
+      cx.fillStyle=`rgba(120,220,255,${.35+.4*b+.3*c})`;cx.beginPath();cx.arc(x,y,S*(.05+.06*c),0,TAU);cx.fill()}
+    cx.restore();
+    cx.fillStyle=`rgba(225,235,255,${.22+.25*c})`;cx.strokeStyle=`rgba(230,240,255,${.45+.3*c})`;cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(S*.35,0);cx.bezierCurveTo(S*.2,-S*.3,-S*.6,-S*.18,-S*1.3,-S*.02);
+    cx.lineTo(-S*1.3,S*.02);cx.bezierCurveTo(-S*.6,S*.18,S*.2,S*.3,S*.35,0);cx.fill();cx.stroke();
+    cx.fillStyle=`rgba(225,235,255,${.18+.2*c})`;cx.beginPath();cx.ellipse(-S*1.25,0,S*.14,S*.2,0,0,TAU);cx.fill();
+    cx.fillStyle='rgba(255,200,150,.5)';cx.beginPath();cx.ellipse(-S*.2,0,S*.25,S*.04,0,0,TAU);cx.fill();
+    cx.fillStyle='#1a2030';cx.beginPath();cx.arc(S*.25,-S*.06,S*.07,0,TAU);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.8)';cx.beginPath();cx.arc(S*.23,-S*.08,S*.02,0,TAU);cx.fill();
+  },
+  jumonji(S,t,h){           // dumbo octopus: ear fins and a webbed umbrella that balloons out
+    const c=crTap>0?tapOpen(1.6):0,fl=Math.sin(t*3)*.4;
+    cx.fillStyle='#f0c6b4';
+    for(const sd of[-1,1]){cx.save();cx.translate(sd*S*.42,-S*.42);cx.rotate(sd*(.3+fl));
+      cx.beginPath();cx.ellipse(sd*S*.12,0,S*.2,S*.1,0,0,TAU);cx.fill();cx.restore()}
+    const w=S*(.75+.35*c),dp=S*(.35+.3*c);
+    cx.fillStyle='rgba(235,170,160,.92)';cx.beginPath();cx.moveTo(-w,0);
+    for(let i=0;i<=8;i++){const x=-w+i*w/4;cx.quadraticCurveTo(x+w/8,dp+Math.sin(t*2+i)*S*.04,x+w/4,dp*.6)}
+    cx.lineTo(w,0);cx.fill();
+    cx.strokeStyle='rgba(200,120,115,.6)';cx.lineWidth=1.2;
+    for(let i=0;i<8;i++){const x=-w*.85+i*w*.24;cx.beginPath();cx.moveTo(x*.4,0);cx.lineTo(x,dp*.75);cx.stroke()}
+    const g=cx.createRadialGradient(-S*.15,-S*.4,2,0,-S*.2,S*.7);g.addColorStop(0,'#fff0e8');g.addColorStop(1,'#eab0a0');
+    cx.fillStyle=g;cx.beginPath();cx.ellipse(0,-S*.22,S*.55,S*.48,0,Math.PI,0);cx.lineTo(S*.55,0);cx.lineTo(-S*.55,0);cx.fill();
+    eye(-S*.2,-S*.18,S*.08,t,h);eye(S*.2,-S*.18,S*.08,t,h);
+  },
+  fukuro(S,t,h){            // gulper eel: a huge pelican-like mouth on a whip of a body
+    const c=crTap>0?tapOpen(1.4):.08+Math.sin(t*1.3)*.04;
+    cx.strokeStyle='#1c1a22';cx.lineCap='round';
+    cx.beginPath();cx.moveTo(-S*.1,0);
+    for(let i=1;i<=14;i++){const f=i/14;cx.lineTo(-S*.1-f*S*1.5,Math.sin(t*3-f*6)*S*.12*f)}
+    cx.lineWidth=S*.08;cx.stroke();
+    cx.save();cx.globalCompositeOperation='lighter';cx.fillStyle=`rgba(255,120,160,${.5+.4*Math.sin(t*5)})`;
+    cx.beginPath();cx.arc(-S*1.6,Math.sin(t*3-6)*S*.12,S*.05,0,TAU);cx.fill();cx.restore();
+    // the pouch-like jaws
+    const hx=-S*.05,hy=0,op=c*1.1;
+    cx.fillStyle='#120e14';cx.beginPath();cx.moveTo(hx,hy);
+    cx.quadraticCurveTo(S*.5,-S*.15-op*S*.6,S*.95,-S*.1-op*S*.45);
+    cx.quadraticCurveTo(S*.7,S*.05,S*.95,S*.1+op*S*.55);
+    cx.quadraticCurveTo(S*.5,S*.15+op*S*.7,hx,hy);cx.fill();
+    if(op>.1){cx.fillStyle='#3a0c1a';cx.beginPath();cx.ellipse(S*.75,0,S*.12*op,S*.38*op,0,0,TAU);cx.fill()}
+    cx.strokeStyle='rgba(120,110,140,.6)';cx.lineWidth=1.2;cx.beginPath();cx.moveTo(hx,hy);
+    cx.quadraticCurveTo(S*.5,-S*.15-op*S*.6,S*.95,-S*.1-op*S*.45);cx.stroke();
+    cx.fillStyle='#2a2632';cx.beginPath();cx.ellipse(S*.02,-S*.06,S*.14,S*.1,0,0,TAU);cx.fill();
+    cx.fillStyle='#d8e0f0';cx.beginPath();cx.arc(S*.1,-S*.09,S*.025,0,TAU);cx.fill();
+  },
+  /* ---- 5th sea ---- */
+  kusauo(S,t,h){            // hadal snailfish: pale pink and wobbly
+    const c=crTap>0&&crTap<1.4?Math.sin(crTap*25)*(1-crTap/1.4):0,sw=Math.sin(t*3)*S*.12;
+    cx.scale(1+c*.12,1-c*.12);
+    cx.fillStyle='rgba(245,205,210,.55)';cx.beginPath();cx.moveTo(-S*.2,-S*.25);
+    cx.quadraticCurveTo(-S*.9,-S*.3+sw*.4,-S*1.4,sw);cx.quadraticCurveTo(-S*.9,S*.28+sw*.4,-S*.2,S*.25);cx.fill();
+    const g=cx.createRadialGradient(S*.15,-S*.12,2,S*.05,0,S*.7);g.addColorStop(0,'rgba(255,238,240,.92)');g.addColorStop(1,'rgba(235,175,185,.82)');
+    cx.fillStyle=g;cx.beginPath();cx.moveTo(S*.6,0);cx.bezierCurveTo(S*.6,-S*.38,S*.05,-S*.42,-S*.35,-S*.18);
+    cx.quadraticCurveTo(-S*1.1,-S*.05+sw*.6,-S*1.3,sw);cx.quadraticCurveTo(-S*1.1,S*.08+sw*.6,-S*.35,S*.18);
+    cx.bezierCurveTo(S*.05,S*.42,S*.6,S*.38,S*.6,0);cx.fill();
+    cx.fillStyle='rgba(200,110,120,.35)';cx.beginPath();cx.ellipse(S*.05,S*.08,S*.2,S*.1,0,0,TAU);cx.fill();
+    cx.fillStyle='rgba(255,255,255,.4)';cx.beginPath();cx.ellipse(S*.2,-S*.25,S*.18,S*.05,-.2,0,TAU);cx.fill();
+    eye(S*.38,-S*.1,S*.05,t,h);
+  },
+  senju(S,t,h){             // sea pig: a plump pink sea cucumber walking on tube legs
+    const c=crTap>0&&crTap<2?1:0,wk=t*(c?9:3);
+    cx.fillStyle='#d898b4';cx.lineCap='round';
+    for(let i=0;i<6;i++){const x=-S*.55+i*S*.22,k=Math.sin(wk+i*1.2)*S*.06;
+      cx.beginPath();cx.ellipse(x+k,S*.36,S*.07,S*.13,k/S*2,0,TAU);cx.fill()}
+    const g=cx.createLinearGradient(0,-S*.4,0,S*.35);g.addColorStop(0,'#f6c8dc');g.addColorStop(1,'#cf86a8');
+    cx.fillStyle=g;cx.beginPath();cx.ellipse(0,0,S*.82,S*.36,0,0,TAU);cx.fill();
+    cx.strokeStyle='#e7a8c4';cx.lineWidth=S*.06;
+    for(let k=0;k<4;k++){const x=S*(.25+k*.09),b=Math.sin(t*2+k)*S*.05;cx.beginPath();cx.moveTo(x,-S*.3);cx.lineTo(x+S*.06+b,-S*(.6+(k%2)*.12))}
+    cx.stroke();
+    cx.fillStyle='rgba(255,255,255,.35)';cx.beginPath();cx.ellipse(-S*.2,-S*.18,S*.4,S*.07,0,0,TAU);cx.fill();
+    cx.fillStyle='rgba(140,60,100,.35)';for(let i=0;i<7;i++){cx.beginPath();cx.arc(-S*.6+i*S*.18,S*.05+(i%2)*S*.08,S*.025,0,TAU);cx.fill()}
+    eye(S*.6,-S*.05,S*.045,t,h);
+  },
+  kaikou(S,t,h){            // giant hadal amphipod: pale, curved, lots of little legs
+    const c=crTap>0?tapOpen(1.3):0;
+    cx.strokeStyle='#d8c6b0';cx.lineCap='round';cx.lineWidth=S*.035;
+    for(let i=0;i<7;i++){const a=-.9+i*.3,x=Math.cos(a)*S*.5,y=Math.sin(a)*S*.3+S*.12,k=Math.sin(t*10+i)*S*.05;
+      cx.beginPath();cx.moveTo(x,y);cx.lineTo(x-S*.05+k,y+S*.28*(1-c*.5));cx.stroke()}
+    for(let i=0;i<8;i++){const f=i/7,a=Math.PI*(1.05-f*(1.05+c*.75)),r=S*(.52-c*.1),x=Math.cos(a)*r*1.15,y=-Math.sin(a)*r*.75+S*.1;
+      const g=cx.createRadialGradient(x-S*.05,y-S*.06,1,x,y,S*.2);g.addColorStop(0,'#fff8ee');g.addColorStop(1,'#e2cfb6');
+      cx.fillStyle=g;cx.beginPath();cx.ellipse(x,y,S*.17,S*.21,a,0,TAU);cx.fill()}
+    const hx=Math.cos(Math.PI*(1.05-(1.05+c*.75)))*S*(.52-c*.1)*1.15,hy=-Math.sin(Math.PI*(1.05-(1.05+c*.75)))*S*(.52-c*.1)*.75+S*.1;
+    cx.strokeStyle='#e8d8c4';cx.lineWidth=S*.025;cx.beginPath();cx.moveTo(hx,hy);cx.quadraticCurveTo(hx+S*.4,hy-S*.3,hx+S*.6,hy-S*.1+Math.sin(t*3)*S*.05);cx.stroke();
+    cx.fillStyle='#1a1010';cx.beginPath();cx.ellipse(hx+S*.06,hy-S*.04,S*.05,S*.035,0,0,TAU);cx.fill();
+  },
+  atolla(S,t,h){            // Atolla: a dark red crown jelly; its rim flashes in a spinning ring
+    const c=crTap>0?Math.max(0,1-crTap/2.6):0;
+    cx.strokeStyle='rgba(200,60,70,.55)';cx.lineWidth=1.2;
+    for(let i=0;i<12;i++){const x=-S*.6+i*S*.11;cx.beginPath();cx.moveTo(x,S*.1);
+      cx.quadraticCurveTo(x+Math.sin(t*2+i)*S*.12,S*.45,x+Math.sin(t*1.5+i*2)*S*.18,S*.8);cx.stroke()}
+    cx.strokeStyle='rgba(180,40,60,.8)';cx.lineWidth=2;cx.beginPath();cx.moveTo(S*.5,S*.1);cx.quadraticCurveTo(S*.8,S*.6,S*.4,S*1.2+Math.sin(t)*S*.1);cx.stroke();
+    const g=cx.createRadialGradient(0,-S*.1,2,0,0,S*.8);g.addColorStop(0,'#c0303c');g.addColorStop(1,'#5a0c1c');
+    cx.fillStyle=g;cx.beginPath();cx.ellipse(0,0,S*.75,S*.32,0,Math.PI,0);cx.lineTo(S*.75,S*.08);cx.lineTo(-S*.75,S*.08);cx.fill();
+    cx.fillStyle='rgba(255,140,150,.2)';cx.beginPath();cx.ellipse(0,-S*.12,S*.3,S*.14,0,0,TAU);cx.fill();
+    cx.save();cx.globalCompositeOperation='lighter';
+    for(let i=0;i<16;i++){const a=i/16*TAU,x=Math.cos(a)*S*.72,y=S*.06+Math.sin(a)*S*.1;
+      const run=c>0?Math.max(0,Math.cos(a-t*9))**8:0,b=.15+.85*run;
+      cx.fillStyle=`rgba(80,170,255,${b})`;cx.beginPath();cx.arc(x,y,S*(.035+.05*run),0,TAU);cx.fill()}
+    cx.restore();
   }
+
 
 };
 function drawCreature(t){
@@ -596,19 +819,25 @@ $('pause').onclick=e=>{
 const MS=50;
 const SEQ1=['whale','vent','deme','glow','blob','lily','squid','hoya','vent','treasure'];
 const SEQ2=['whale','vent','deme','bone','glow','blob','lily','squid','hoya','treasure'];   // 2nd sea: the bone forest
-let SEQ=seaB()?SEQ2:SEQ1;
-const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱',deme:'デメニギス',lily:'ウミユリの森',blob:'ブロブフィッシュ',hoya:'オオグチボヤ',bone:'クジラの骨の森'};
+const SEQS=[SEQ1,SEQ2,
+  ['garden','whale','vent','krill','deme','glow','lily','squid','hoya','treasure'],
+  ['garden','whale','vent','brine','deme','glow','blob','squid','bone','treasure'],
+  ['garden','whale','vent','amphi','deme','glow','bone','squid','hoya','treasure']];
+let SEQ=SEQS[seaN()];
+const EV={};   // events added for the 3rd-5th seas register themselves here
+const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱',deme:'デメニギス',lily:'ウミユリの森',blob:'ブロブフィッシュ',hoya:'オオグチボヤ',bone:'クジラの骨の森',garden:'チンアナゴの砂地',krill:'オキアミの大群',brine:'深海の湖',amphi:'ヨコエビの大群'};
 let shrimps=[],plume=[],plank=[],whale=null;
 function ease(x){x=Math.max(0,Math.min(1,x));return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2}
 
 function startEvent(kind){
-  evt={kind,t:0,n:0,len:{vent:24,squid:20,treasure:22,deme:20,lily:26,blob:20,hoya:24,bone:28}[kind]||16,arrived:false,ending:false,hp:0,shown:-1};
+  evt={kind,t:0,n:0,len:(EV[kind]&&EV[kind].len)||{vent:24,squid:20,treasure:22,deme:20,lily:26,blob:20,hoya:24,bone:28}[kind]||16,arrived:false,ending:false,hp:0,shown:-1};
   const ev=$('ev');ev.classList.toggle('hot',kind==='vent'||kind==='treasure');
   $('evName').textContent=NAMES[kind];
-  const LB={vent:['エビ','ぴき'],squid:['タッチ','回'],treasure:['たから','こ'],lily:['タッチ','回'],blob:['つんつん','回'],hoya:['えさ','こ'],bone:['ハナムシ','ひき']}[kind]||['泡','こ'];
-  $('evLbl').textContent=kind==='vent'&&seaB()?'エビ・カニ':LB[0];$('evU').textContent=LB[1];
+  const LB=(EV[kind]&&EV[kind].lb)||{vent:['エビ','ぴき'],squid:['タッチ','回'],treasure:['たから','こ'],lily:['タッチ','回'],blob:['つんつん','回'],hoya:['えさ','こ'],bone:['ハナムシ','ひき']}[kind]||['泡','こ'];
+  $('evLbl').textContent=kind==='vent'&&seaN()>=1?'エビ・カニ':LB[0];$('evU').textContent=LB[1];
   $('evn').textContent=0;ev.hidden=false;
-  if(kind==='vent'){
+  if(EV[kind])EV[kind].start();
+  else if(kind==='vent'){
     showToast('<b>スーッ…</b>海の底のさらに下へ、沈んでいきます',2400);rumble();
     VENTS.forEach(v=>{v.cd=0;v.et=1+Math.random();v.bt=Math.random()});
   }else if(kind==='whale'){
@@ -644,7 +873,7 @@ function startEvent(kind){
   update();
 }
 function endEvent(){
-  const k=evt.kind,n=evt.n;evt=null;whale=null;squid=null;chest=null;deme=null;lilies=[];swimmers=[];blob=null;hoyas=[];hfood=[];bone=null;worms=[];hags=[];
+  const k=evt.kind,n=evt.n;if(EV[k]&&EV[k].end)EV[k].end();evt=null;whale=null;squid=null;chest=null;deme=null;lilies=[];swimmers=[];blob=null;hoyas=[];hfood=[];bone=null;worms=[];hags=[];
   $('ev').hidden=true;nextAt=Math.ceil((score+20)/MS)*MS;spawnT=.4;
   for(const s of shrimps)if(s.mode!=='flip')flee(s);
   const msg={whale:'<b>'+n+' こ</b>クジラの泡をはじきました',glow:'<b>'+n+' こ</b>光る泡をはじきました',
@@ -654,7 +883,7 @@ function endEvent(){
     lily:'<b>'+n+' 回</b>ウミユリにふれました。森はまた静かに揺れています',
     blob:'<b>'+n+' 回</b>ブロブフィッシュをつつきました。むすっとした顔のまま、ちょっと楽しそうでした',
     bone:'<b>'+n+' ひき</b>のホネクイハナムシが引っこみました。骨の森は、また静かに赤くゆれています',
-    hoya:'<b>えさ '+n+' こ</b>オオグチボヤが食べました。おなかいっぱいで、口をとじて休んでいます'}[k];
+    hoya:'<b>えさ '+n+' こ</b>オオグチボヤが食べました。おなかいっぱいで、口をとじて休んでいます'}[k]||(EV[k]?EV[k].msg(n):'');
   if(msg)showToast(msg,3000);
   happy();update();
 }
@@ -674,6 +903,7 @@ function stepEvent(dt){
   else if(evt.kind==='blob')stepBlob(dt);
   else if(evt.kind==='hoya')stepHoya(dt);
   else if(evt.kind==='bone')stepBone(dt);
+  else if(EV[evt.kind])EV[evt.kind].step(dt);
   else stepGlow(dt);
   if(evt&&evt.t>=evt.len)endEvent();
 }
@@ -720,7 +950,7 @@ function ventGeo(v){
 function spawnShrimp(v,burst){
   const g=ventGeo(v),sc=vScale();
   shrimps.push({x:g.x+(Math.random()-.5)*g.w*.5,y:g.top,vx:(Math.random()-.5)*(burst?300:150),vy:-(170+Math.random()*(burst?280:170)),
-    s:(8+Math.random()*5)*sc,hue:340+Math.random()*35,mode:'jump',ph:Math.random()*6,tx:0,ty:0,spin:0,ang:-1.57,kani:seaB()&&Math.random()<.7});
+    s:(8+Math.random()*5)*sc,hue:340+Math.random()*35,mode:'jump',ph:Math.random()*6,tx:0,ty:0,spin:0,ang:-1.57,kani:seaN()>=1&&Math.random()<.7});
 }
 function ventBubble(v){
   const g=ventGeo(v),r=10+Math.random()*9;
@@ -746,9 +976,9 @@ function stepVent(dt){
     for(const p of bits)p.y-=shift;
   }
   if(!e.arrived&&t>=SINK){
-    e.arrived=true;const first=meet('ebi'),ft=meet('tube');let fk=false;if(seaB())fk=meet('kani');
+    e.arrived=true;const first=meet('ebi'),ft=meet('tube');let fk=false;if(seaN()>=1)fk=meet('kani');
     const nw=[first&&'熱水のエビ',ft&&'チューブワーム',fk&&'ユノハナガニ'].filter(Boolean);
-    showToast('<b>熱水の丘に到着</b>'+(seaB()?'熱いお湯といっしょに、白いカニたちとエビがあふれ出てきました。':'地の底から熱いお湯がわき出し、エビたちがあふれ出てきました。')+'ふもとの赤い花のようなものはチューブワーム。ふれてみて'+(nw.length?'<br>（図鑑に「'+nw.join('」「')+'」が加わりました）':''),4000);
+    showToast('<b>熱水の丘に到着</b>'+(seaN()>=1?'熱いお湯といっしょに、白いカニたちとエビがあふれ出てきました。':'地の底から熱いお湯がわき出し、エビたちがあふれ出てきました。')+'ふもとの赤い花のようなものはチューブワーム。ふれてみて'+(nw.length?'<br>（図鑑に「'+nw.join('」「')+'」が加わりました）':''),4000);
     VENTS.forEach(v=>{for(const w of v.tubes){w.out=0;w.back=e.t+.3+Math.random()*1.2}});
     VENTS.forEach(v=>erupt(v,10));
   }
@@ -763,7 +993,7 @@ function stepVent(dt){
   if(!e.ending&&t>=e.len-RISE){
     e.ending=true;
     for(const s of shrimps)if(s.mode!=='flip')flee(s);
-    showToast('<b>'+(seaB()?'エビ・カニ ':'エビ ')+e.n+' ぴき</b>と遊びました。ゆっくり浮かびあがります',3000);
+    showToast('<b>'+(seaN()>=1?'エビ・カニ ':'エビ ')+e.n+' ぴき</b>と遊びました。ゆっくり浮かびあがります',3000);
   }
   // hot shimmering water
   if(hp>0)for(const v of VENTS){if(Math.random()<dt*22){const g=ventGeo(v);
@@ -1930,6 +2160,278 @@ function drawBone(t){
   cx.restore();
 }
 
+/* ---- チンアナゴの砂地: garden eels poke out of the bright sand, all facing the current,
+   and duck into their burrows when something comes close ---- */
+let eels=[],eelFish=null;
+function evFade(e,a,b){return Math.max(0,Math.min(1,e.t/(a||1.2),(e.len-e.t)/(b||1.5)))}
+function hideEels(x,y,R,speed,now){
+  let n=0;
+  for(const e of eels){const d=Math.hypot(e.x-x,(e.y-y)*1.4);if(d>R)continue;
+    if(e.out>.5&&!(now>=e.hideAt&&now<e.back))n++;
+    e.hideAt=now+d/speed;e.back=e.hideAt+1.5+Math.random()*1.8}
+  return n;
+}
+EV.garden={len:24,lb:['アナゴ','ひき'],bubbles:true,
+  start(){
+    eels=[];eelFish=null;const n=Math.round(Math.min(72,Math.max(38,W*H/8000)));
+    for(let i=0;i<n;i++){const f=Math.pow(Math.random(),.8),s=(.5+f*.8)*vScale();
+      eels.push({x:W*(.04+Math.random()*.92),y:H*(.6+f*.32),s,h:(42+Math.random()*30)*s,ph:Math.random()*6,out:0,
+        hideAt:0,back:.8+Math.random()*2.8,nishiki:Math.random()<.25})}
+    eels.sort((a,b)=>a.y-b.y);evt.fishT=5.5;evt.cur=Math.random()<.5?1:-1;
+    const f1=meet('chin'),f2=meet('nishiki');
+    showToast('<b>チンアナゴの砂地'+(f1?'<br>はじめまして！':'')+'</b>明るい砂地から、細長いアナゴたちがにょろっ。オレンジのしまはニシキアナゴ。ふれると、いっせいにシュッとかくれます',4000);
+  },
+  step(dt){
+    const e=evt,now=e.t,fin=now>e.len-2.2;
+    e.fishT-=dt;
+    if(e.fishT<=0&&!fin&&!eelFish){e.fishT=6+Math.random()*3;const d=Math.random()<.5?1:-1;
+      eelFish={x:d>0?-60:W+60,y:H*(.62+Math.random()*.2),d,v:W/3.2}}
+    if(eelFish){eelFish.x+=eelFish.d*eelFish.v*dt;
+      for(const q of eels)if(Math.abs(q.x-eelFish.x)<70&&Math.abs(q.y-eelFish.y)<H*.18&&!(now>=q.hideAt&&now<q.back)){q.hideAt=now;q.back=now+1.6+Math.random()*1.5}
+      if(eelFish.x<-80||eelFish.x>W+80)eelFish=null}
+    for(const q of eels){const hid=fin||(now>=q.hideAt&&now<q.back);
+      q.out+=((hid?0:1)-q.out)*Math.min(1,dt*(hid?22:1.5));q.ph+=dt}
+  },
+  hit(px,py){
+    let near=false;
+    for(const q of eels){const hx=q.x,hy=q.y-q.h*q.out*.6;if((px-hx)**2+(py-hy)**2<(q.h*.6+26)**2){near=true;break}}
+    if(!near)return false;
+    const n=hideEels(px,py,120*vScale(),520,evt.t);
+    if(n){const g=Math.max(1,Math.round(n/3));score+=g;evt.n+=n;$('evn').textContent=evt.n;
+      pops.push({x:px,y:py-34,life:.9,txt:'シュッ +'+g,col:'#fff3d6'});hiss(.1);update()}
+    return true;
+  },
+  draw(t){
+    const e=evt,a=evFade(e);if(a<=0)return;
+    cx.save();cx.globalAlpha=a;
+    cx.fillStyle='rgba(120,220,230,.12)';cx.fillRect(0,0,W,H);
+    const top=H*.56,sg=cx.createLinearGradient(0,top,0,H);sg.addColorStop(0,'#cdbd92');sg.addColorStop(1,'#9c8a62');
+    cx.fillStyle=sg;cx.beginPath();cx.moveTo(0,H);for(let x=0;x<=W+10;x+=10)cx.lineTo(x,top+Math.sin(x*.012)*6);cx.lineTo(W,H);cx.closePath();cx.fill();
+    cx.strokeStyle='rgba(255,250,225,.22)';cx.lineWidth=1.2;
+    for(let r=0;r<6;r++){const y0=top+20+r*(H-top)/6;cx.beginPath();for(let x=0;x<=W+10;x+=8){const y=y0+Math.sin(x*.05+r)*3;x?cx.lineTo(x,y):cx.moveTo(x,y)}cx.stroke()}
+    // flickering sunlight on the sand
+    cx.save();cx.globalCompositeOperation='lighter';cx.fillStyle='rgba(255,255,230,.05)';
+    for(let i=0;i<14;i++){const x=(i*137%100)/100*W+Math.sin(t*.7+i)*20,y=top+((i*53)%100)/100*(H-top);cx.beginPath();cx.ellipse(x,y,30,8,0,0,TAU);cx.fill()}
+    cx.restore();
+    if(eelFish){const f=eelFish;cx.fillStyle='rgba(40,60,70,.25)';cx.beginPath();cx.ellipse(f.x,f.y+H*.08,26,6,0,0,TAU);cx.fill();
+      cx.save();cx.translate(f.x,f.y);cx.scale(f.d,1);cx.fillStyle='#e8b24a';cx.beginPath();cx.ellipse(0,0,24,11,0,0,TAU);cx.fill();
+      cx.beginPath();cx.moveTo(-20,0);cx.lineTo(-34,-10+Math.sin(t*12)*3);cx.lineTo(-34,10+Math.sin(t*12)*3);cx.fill();
+      cx.fillStyle='#2a1a10';cx.beginPath();cx.arc(13,-3,2.5,0,TAU);cx.fill();cx.restore()}
+    for(const q of eels){
+      cx.fillStyle='rgba(70,55,30,.55)';cx.beginPath();cx.ellipse(q.x,q.y,5*q.s,2*q.s,0,0,TAU);cx.fill();
+      const hg=q.h*q.out;if(hg<1.5)continue;
+      const pts=[];for(let i=0;i<=8;i++){const f=i/8;pts.push([q.x+evt.cur*f*f*hg*.3+Math.sin(t*1.4+q.ph+f*1.6)*hg*.07*f,q.y-hg*f])}
+      const hd=pts[8],hx=hd[0]+evt.cur*hg*.1,hy=hd[1]+hg*.05;
+      cx.lineCap='round';cx.lineJoin='round';cx.lineWidth=4.6*q.s;cx.strokeStyle=q.nishiki?'#fff4e6':'#ece4cf';
+      cx.beginPath();pts.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.lineTo(hx,hy);cx.stroke();
+      if(q.nishiki){cx.setLineDash([4*q.s,4*q.s]);cx.strokeStyle='#ef8a2c';cx.stroke();cx.setLineDash([])}
+      else{cx.fillStyle='rgba(60,50,40,.7)';for(const k of[2,4,6]){cx.beginPath();cx.arc(pts[k][0]+1,pts[k][1],.9*q.s,0,TAU);cx.fill()}}
+      cx.fillStyle=q.nishiki?'#fff4e6':'#ece4cf';cx.beginPath();cx.ellipse(hx,hy,3.4*q.s,2.6*q.s,0,0,TAU);cx.fill();
+      cx.fillStyle='#14100c';cx.beginPath();cx.arc(hx+evt.cur*1.2*q.s,hy-.6*q.s,1.4*q.s,0,TAU);cx.fill();
+    }
+    cx.restore();
+  },
+  end(){eels=[];eelFish=null},
+  msg(n){return'<b>'+n+' ひき</b>のアナゴがかくれました。しばらくすると、またにょろっと顔を出します'}
+};
+
+/* ---- オキアミの大群: a river of countless Antarctic krill flows by; touch it to punch a hole ---- */
+let krill=[];
+function krillY(x,t,o){return H*.5+Math.sin(x/W*3.2+t*.45)*H*.15+Math.sin(x/W*7.1-t*.8)*H*.035+o*H*(.12+.05*Math.sin(x/W*2+t*.3))}
+EV.krill={len:24,lb:['オキアミ','ひき'],bubbles:false,
+  start(){
+    krill=[];const n=Math.round(Math.min(1000,Math.max(500,W*H/280)));
+    for(let i=0;i<n;i++){const o=(Math.random()+Math.random()-1)*1.2,x=-W*.4+Math.random()*W*1.4;
+      krill.push({x,o,y:krillY(x,0,o),vx:60,vy:0,ph:Math.random()*6,l:(4.5+Math.random()*3)*vScale(),k:i%2,fl:0})}
+    const first=meet('okiami');shimmer();
+    showToast('<b>オキアミの大群'+(first?'<br>はじめまして！':'')+'</b>何万びきものナンキョクオキアミ。南極の海では、群れで海の色が変わるほど。ふれると、ざわっと穴があきます',4000);
+  },
+  step(dt){
+    const e=evt,t=e.t,fin=t>e.len-3.5;
+    for(const k of krill){
+      const ty=krillY(k.x,t,k.o),sp=fin?260:55+25*Math.sin(k.ph*.3);
+      k.vx+=(sp-k.vx)*Math.min(1,dt*1.2);k.vy+=((ty-k.y)*1.8-k.vy)*Math.min(1,dt*1.6);
+      k.x+=k.vx*dt;k.y+=k.vy*dt;k.ph+=dt*4;if(k.fl>0)k.fl-=dt;
+      if(k.x>W+30&&!fin){k.x-=W+80;k.y=krillY(k.x,t,k.o)}
+    }
+  },
+  hit(px,py){
+    const R=105*vScale();let n=0;
+    for(const k of krill){const dx=k.x-px,dy=k.y-py,d=Math.hypot(dx,dy);if(d>R||d<.01)continue;
+      const f=(1-d/R)*560;k.vx+=dx/d*f;k.vy+=dy/d*f;k.fl=1.2;n++}
+    if(!n)return false;
+    const g=Math.min(6,Math.max(1,Math.round(n/40)));score+=g;evt.n+=n;$('evn').textContent=evt.n;
+    pops.push({x:px,y:py-30,life:.9,txt:'ざわっ +'+g,col:'#ffd2c0'});hiss(.14);update();return true;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.5,2);if(a<=0)return;
+    cx.save();cx.globalAlpha=a;
+    cx.fillStyle='rgba(170,215,240,.08)';cx.fillRect(0,0,W,H);
+    const P=[new Path2D(),new Path2D()],eyes=new Path2D(),glow=new Path2D();
+    for(const k of krill){if(k.x<-10||k.x>W+10)continue;
+      const an=Math.atan2(k.vy,k.vx),c=Math.cos(an),s=Math.sin(an),bend=Math.sin(k.ph)*.25,l=k.l;
+      const p=P[k.k];p.moveTo(k.x,k.y);p.quadraticCurveTo(k.x-c*l*.5-s*l*bend,k.y-s*l*.5+c*l*bend,k.x-c*l,k.y-s*l);
+      eyes.moveTo(k.x+1.1,k.y);eyes.arc(k.x,k.y,1.1*vScale(),0,TAU);
+      if(k.fl>0){glow.moveTo(k.x-c*l*.5+3,k.y-s*l*.5);glow.arc(k.x-c*l*.5,k.y-s*l*.5,3*k.fl,0,TAU)}}
+    cx.lineCap='round';cx.lineWidth=2*vScale();
+    cx.strokeStyle='rgba(255,140,110,.85)';cx.stroke(P[0]);cx.strokeStyle='rgba(255,185,150,.8)';cx.stroke(P[1]);
+    cx.fillStyle='#1a0c0c';cx.fill(eyes);
+    cx.save();cx.globalCompositeOperation='lighter';cx.fillStyle='rgba(90,220,255,.55)';cx.fill(glow);cx.restore();
+    cx.restore();
+  },
+  end(){krill=[]},
+  msg(n){return'<b>'+n+' ひき</b>のオキアミが、ざわっと散りました。大群は南極の海の奥へ流れていきます'}
+};
+
+/* ---- 深海の湖 (brine pool): a lake of heavy salty water lies on the sea floor, its shore
+   packed with mussels. Creatures that wander onto it go limp and sink; tap them to save them ---- */
+let mussels=[],ripples=[],strays=[];
+function poolGeo(){return{x:W/2,y:H*.77,rx:Math.min(W*.42,300),ry:Math.min(H*.07,56)}}
+function inPool(x,y,k){const g=poolGeo();return((x-g.x)/g.rx)**2+((y-g.y)/g.ry)**2<(k||1)}
+EV.brine={len:28,lb:['たすけた','ひき'],bubbles:true,
+  start(){
+    const g=poolGeo(),sc=vScale();mussels=[];ripples=[];strays=[];
+    const N=Math.round(260*Math.min(1.3,g.rx/220));
+    for(let i=0;i<N;i++){const a=Math.random()*TAU,r=1.04+Math.pow(Math.random(),1.6)*.42;
+      mussels.push({x:g.x+Math.cos(a)*g.rx*r,y:g.y+Math.sin(a)*g.ry*r*1.25,a:a+Math.PI/2+(Math.random()-.5)*.8,s:(.8+Math.random()*.5)*sc,o:1,shut:-1})}
+    mussels.sort((p,q)=>p.y-q.y);
+    evt.sT=2.5;evt.mT=1;
+    const first=meet('hibari');rumble();
+    showToast('<b>深海の湖'+(first?'<br>はじめまして！':'')+'</b>海の底に、とても塩からい水がたまった“湖”。岸にはシンカイヒバリガイがびっしり。迷いこんで動けなくなった生き物は、ふれると助けられます',4600);
+  },
+  step(dt){
+    const e=evt,t=e.t,fin=t>e.len-3,g=poolGeo();
+    for(const m of mussels){const tg=t<m.shut?0:1;m.o+=(tg-m.o)*Math.min(1,dt*(tg?2:16))}
+    for(let i=ripples.length-1;i>=0;i--){const r=ripples[i];r.r+=dt*90;r.life-=dt*.5;if(r.life<=0)ripples.splice(i,1)}
+    e.mT-=dt;if(e.mT<=0){e.mT=.8+Math.random()*1.2;const m=mussels[Math.floor(Math.random()*mussels.length)];
+      if(m)bubbles.push({x:m.x,y:m.y-6,r:5+Math.random()*5,sp:60+Math.random()*30,ph:Math.random()*6,wf:1.4,wa:6,hue:190,pearl:false,glow:false,born:.3})}
+    e.sT-=dt;
+    if(e.sT<=0&&!fin&&strays.length<3){e.sT=3+Math.random()*2.5;const d=Math.random()<.5?1:-1;
+      strays.push({kind:Math.random()<.6?'fish':'ebi',x:d>0?-50:W+50,y:g.y-g.ry*(.2+Math.random()*.5)-H*.12,d,
+        tx:g.x+(Math.random()-.5)*g.rx*.8,ty:g.y+(Math.random()-.5)*g.ry*.5,st:'swim',roll:0,sink:0,a:1,ph:Math.random()*6,s:vScale()})}
+    for(let i=strays.length-1;i>=0;i--){const s=strays[i];s.ph+=dt;
+      if(s.st==='swim'){const dx=s.tx-s.x,dy=s.ty-s.y,dd=Math.hypot(dx,dy)||1,v=fin?160:55;
+        s.x+=dx/dd*v*dt;s.y+=dy/dd*v*dt;s.d=dx>0?1:-1;
+        if(inPool(s.x,s.y,.85)){s.st='stun';s.sink=0;pops.push({x:s.x,y:s.y-26,life:.9,txt:'…!',col:'#cfe2ee'})}}
+      else if(s.st==='stun'){s.roll=Math.min(Math.PI*.9,s.roll+dt*.7);s.sink+=dt;s.y+=dt*4;s.a=Math.max(0,1-s.sink/6);
+        if(s.a<=0)strays.splice(i,1)}
+      else{s.vy+=(-30-s.vy)*Math.min(1,dt*2);s.x+=s.d*190*dt;s.y+=s.vy*dt;s.roll+=(0-s.roll)*Math.min(1,dt*6);
+        if(s.x<-80||s.x>W+80)strays.splice(i,1)}
+    }
+  },
+  hit(px,py){
+    for(const s of strays){if(s.st!=='stun')continue;
+      if((px-s.x)**2+(py-s.y)**2<=(28*s.s+14)**2){s.st='saved';s.vy=-170;s.a=1;s.d=px<W/2?-1:1;
+        score+=3;evt.n++;$('evn').textContent=evt.n;happy();
+        pops.push({x:s.x,y:s.y-30,life:1.1,txt:'たすけた！ +3',col:'#bff3f0'});update();return true}}
+    const t=evt.t;let n=0,near=false;
+    for(const m of mussels){const d=Math.hypot(m.x-px,(m.y-py)*1.3);if(d<70){near=true;if(m.o>.5)n++;m.shut=t+.9+Math.random()*.8+d/300}}
+    if(near){if(n){const g=Math.max(1,Math.round(n/6));score+=g;pops.push({x:px,y:py-26,life:.8,txt:'パチッ +'+g,col:'#e8d0b8'});noise(.12,'highpass',1800,.15);update()}return true}
+    if(inPool(px,py,1)){ripples.push({x:px,y:py,r:4,life:1});chime(392);return true}
+    return false;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.4,1.8);if(a<=0)return;const g=poolGeo();
+    cx.save();cx.globalAlpha=a;seaFloor(.5);
+    cx.fillStyle='rgba(40,34,30,.9)';cx.beginPath();cx.ellipse(g.x,g.y+4,g.rx*1.5,g.ry*1.9,0,0,TAU);cx.fill();
+    // mussels on the shore
+    const shell=new Path2D(),slit=new Path2D(),hl=new Path2D();
+    for(const m of mussels){const c=Math.cos(m.a),s=Math.sin(m.a),L=6*m.s,w=3*m.s*(.7+.3*m.o);
+      shell.moveTo(m.x+c*L,m.y+s*L);shell.ellipse(m.x,m.y,L,w,m.a,0,TAU);
+      hl.moveTo(m.x-s*w*.5+c*L*.6,m.y+c*w*.5+s*L*.6);hl.lineTo(m.x-s*w*.5-c*L*.6,m.y+c*w*.5-s*L*.6);
+      if(m.o>.2){slit.moveTo(m.x+c*L*.7,m.y+s*L*.7);slit.lineTo(m.x-c*L*.7,m.y-s*L*.7)}}
+    cx.fillStyle='#2b2329';cx.fill(shell);cx.strokeStyle='rgba(150,130,140,.55)';cx.lineWidth=1;cx.stroke(hl);
+    cx.strokeStyle='rgba(235,170,120,.8)';cx.lineWidth=1.3;cx.stroke(slit);
+    // the lake surface
+    cx.save();cx.beginPath();cx.ellipse(g.x,g.y,g.rx,g.ry,0,0,TAU);cx.clip();
+    const lg=cx.createLinearGradient(0,g.y-g.ry,0,g.y+g.ry);lg.addColorStop(0,'#7e98aa');lg.addColorStop(.5,'#3c5264');lg.addColorStop(1,'#1c2834');
+    cx.fillStyle=lg;cx.fillRect(g.x-g.rx,g.y-g.ry,g.rx*2,g.ry*2);
+    cx.strokeStyle='rgba(220,240,250,.18)';cx.lineWidth=1;
+    for(let i=0;i<5;i++){const k=((t*.08+i/5)%1);cx.beginPath();cx.ellipse(g.x+Math.sin(t*.3+i)*g.rx*.1,g.y,g.rx*k,g.ry*k,0,0,TAU);cx.stroke()}
+    cx.fillStyle='rgba(255,255,255,.12)';cx.beginPath();cx.ellipse(g.x-g.rx*.2,g.y-g.ry*.45,g.rx*.5,g.ry*.12,0,0,TAU);cx.fill();
+    for(const r of ripples){cx.strokeStyle=`rgba(230,245,255,${.6*r.life})`;cx.lineWidth=1.5;cx.beginPath();cx.ellipse(r.x,r.y,r.r,r.r*g.ry/g.rx*1.6,0,0,TAU);cx.stroke()}
+    cx.restore();
+    cx.strokeStyle='rgba(210,230,240,.35)';cx.lineWidth=1.5;cx.beginPath();cx.ellipse(g.x,g.y,g.rx,g.ry,0,0,TAU);cx.stroke();
+    // wanderers
+    for(const s of strays){cx.save();cx.globalAlpha=a*s.a;cx.translate(s.x,s.y+Math.sin(s.ph*2)*2);cx.scale(s.d*s.s,s.s);cx.rotate(s.roll);
+      if(s.kind==='fish'){cx.fillStyle='#9aa2aa';cx.beginPath();cx.moveTo(18,0);cx.quadraticCurveTo(14,-11,0,-9);cx.quadraticCurveTo(-20,-5,-42,0);
+        cx.quadraticCurveTo(-20,5,0,9);cx.quadraticCurveTo(14,11,18,0);cx.fill();
+        cx.fillStyle='#e8eef2';cx.beginPath();cx.arc(9,-3,3.4,0,TAU);cx.fill();cx.fillStyle='#10161c';cx.beginPath();cx.arc(10,-3,2,0,TAU);cx.fill()}
+      else drawShrimp({x:0,y:0,s:9,ph:s.ph,mode:'swim',ang:0,hue:350});
+      cx.restore()}
+    cx.restore();
+  },
+  end(){mussels=[];ripples=[];strays=[]},
+  msg(n){return n?'<b>'+n+' ひき</b>を湖から助けました。湖は、また静かに光っています':'<b>深海の湖</b>湖は、また静かに光っています'}
+};
+
+/* ---- ヨコエビの大群: bait sinks to the bottom of the trench and countless amphipods swarm it ---- */
+let amphis=[],bait=null;
+function baitPt(){const b=bait,a=Math.random()*TAU,r=Math.sqrt(Math.random());return[b.x+Math.cos(a)*b.L*.42*r,b.y+Math.sin(a)*b.L*.12*r]}
+EV.amphi={len:28,lb:['ヨコエビ','ひき'],bubbles:false,
+  start(){
+    const L=Math.min(W*.55,260);bait={x:W/2,y:-60,ty:floorY(W/2)-L*.14,vy:0,land:false,eat:0,L};amphis=[];evt.spawn=0;
+    const first=meet('yokoebi');
+    showToast('<b>ヨコエビの大群'+(first?'<br>はじめまして！':'')+'</b>海溝の底に、えさの魚が沈んできました。においをかぎつけて、小さなヨコエビたちがどこからともなく…。ふれると、ぱっと散ります',4400);
+  },
+  step(dt){
+    const e=evt,b=bait,t=e.t,fin=t>e.len-3.5,sc=vScale();if(!b)return;
+    if(!b.land){b.vy=Math.min(160,b.vy+200*dt);b.y+=b.vy*dt;if(b.y>=b.ty){b.y=b.ty;b.land=true;knock();sandPuff(b.x,b.y+b.L*.08)}}
+    else if(!fin){e.spawn+=dt*55;const cap=Math.round(Math.min(560,W*H/420));
+      while(e.spawn>=1&&amphis.length<cap){e.spawn--;const side=Math.random(),x=side<.4?-10:side<.8?W+10:Math.random()*W,y=side<.8?H*(.45+Math.random()*.5):H+10;
+        const [tx,ty]=baitPt();amphis.push({x,y,tx,ty,st:'come',vx:0,vy:0,ph:Math.random()*6,s:(.8+Math.random()*.5)*sc,cd:0,sp:110+Math.random()*80})}}
+    let eating=0;
+    for(const q of amphis){q.ph+=dt*8;
+      if(fin&&q.st!=='leave'){q.st='leave';const a=Math.atan2(q.y-b.y,q.x-b.x);q.vx=Math.cos(a)*220;q.vy=Math.sin(a)*220-60}
+      if(q.st==='come'){const dx=q.tx-q.x,dy=q.ty-q.y,d=Math.hypot(dx,dy)||1;q.vx=dx/d*q.sp;q.vy=dy/d*q.sp+Math.sin(q.ph)*30;
+        if(d<5){q.st='eat'}}
+      else if(q.st==='eat'){q.vx=Math.sin(q.ph*1.3)*12;q.vy=Math.cos(q.ph)*8;eating++}
+      else if(q.st==='flee'){q.vx*=1-Math.min(1,dt*2.5);q.vy=q.vy*(1-Math.min(1,dt*2.5))+60*dt;q.cd-=dt;
+        if(q.cd<=0){q.st='come';[q.tx,q.ty]=baitPt()}}
+      q.x+=q.vx*dt;q.y+=q.vy*dt;
+    }
+    if(fin)amphis=amphis.filter(q=>q.x>-30&&q.x<W+30&&q.y>-30&&q.y<H+30);
+    b.eat=Math.min(1,b.eat+eating*dt/9000);
+  },
+  hit(px,py){
+    const R=95*vScale();let n=0;
+    for(const q of amphis){if(q.st==='leave')continue;const dx=q.x-px,dy=q.y-py,d=Math.hypot(dx,dy);if(d>R||d<.01)continue;
+      q.st='flee';q.cd=.9+Math.random()*.9;const f=380*(1-d/R)+120;q.vx=dx/d*f;q.vy=dy/d*f-80;n++}
+    if(!n)return false;
+    const g=Math.min(6,Math.max(1,Math.round(n/12)));score+=g;evt.n+=n;$('evn').textContent=evt.n;
+    pops.push({x:px,y:py-30,life:.9,txt:'ぱっ +'+g,col:'#f2e6d2'});hiss(.12);update();return true;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.4,2),b=bait;if(a<=0||!b)return;
+    cx.save();cx.globalAlpha=a;seaFloor(.62);
+    // the bait: a fish that slowly turns into bones
+    const L=b.L,x=b.x,y=b.y;
+    cx.strokeStyle='#e6dfd0';cx.lineCap='round';cx.lineWidth=Math.max(2,L*.02);
+    cx.beginPath();cx.moveTo(x-L*.42,y);cx.lineTo(x+L*.3,y);cx.stroke();
+    cx.lineWidth=Math.max(1,L*.01);
+    for(let i=0;i<10;i++){const rx=x-L*.32+i*L*.06;cx.beginPath();cx.moveTo(rx,y);cx.quadraticCurveTo(rx-L*.03,y-L*.06,rx-L*.02,y-L*.1);cx.moveTo(rx,y);cx.quadraticCurveTo(rx-L*.03,y+L*.06,rx-L*.02,y+L*.1);cx.stroke()}
+    cx.fillStyle='#e6dfd0';cx.beginPath();cx.ellipse(x+L*.36,y,L*.09,L*.08,0,0,TAU);cx.fill();
+    cx.fillStyle='#1a1414';cx.beginPath();cx.arc(x+L*.38,y-L*.02,L*.025,0,TAU);cx.fill();
+    cx.save();cx.globalAlpha*=1-b.eat*.92;
+    const fg=cx.createLinearGradient(0,y-L*.14,0,y+L*.14);fg.addColorStop(0,'#8c9aa8');fg.addColorStop(1,'#d8dee4');
+    cx.fillStyle=fg;cx.beginPath();cx.moveTo(x+L*.46,y);cx.quadraticCurveTo(x+L*.3,y-L*.16,x-L*.1,y-L*.13);cx.quadraticCurveTo(x-L*.35,y-L*.08,x-L*.42,y);
+    cx.lineTo(x-L*.55,y-L*.1);cx.lineTo(x-L*.53,y);cx.lineTo(x-L*.55,y+L*.1);cx.lineTo(x-L*.42,y);
+    cx.quadraticCurveTo(x-L*.35,y+L*.08,x-L*.1,y+L*.13);cx.quadraticCurveTo(x+L*.3,y+L*.16,x+L*.46,y);cx.fill();
+    cx.fillStyle='#1a2028';cx.beginPath();cx.arc(x+L*.33,y-L*.03,L*.03,0,TAU);cx.fill();
+    cx.restore();
+    // the swarm
+    const body=new Path2D(),eyes=new Path2D();
+    for(const q of amphis){const an=Math.atan2(q.vy,q.vx)+(q.st==='eat'?Math.sin(q.ph)*.6:0),l=3.6*q.s;
+      body.moveTo(q.x+Math.cos(an)*l,q.y+Math.sin(an)*l);body.ellipse(q.x,q.y,l,l*.55,an,0,TAU);
+      eyes.moveTo(q.x+Math.cos(an)*l*.7+.9,q.y+Math.sin(an)*l*.7);eyes.arc(q.x+Math.cos(an)*l*.7,q.y+Math.sin(an)*l*.7,.9*q.s,0,TAU)}
+    cx.fillStyle='#efe0c6';cx.fill(body);cx.strokeStyle='rgba(150,120,90,.5)';cx.lineWidth=.6;cx.stroke(body);
+    cx.fillStyle='#120c0a';cx.fill(eyes);
+    cx.restore();
+  },
+  end(){amphis=[];bait=null},
+  msg(n){return'<b>'+n+' ひき</b>のヨコエビを散らしました。えさはすっかり骨だけに。ヨコエビたちは、また暗い海溝の底へ'}
+};
+
 function chomp(){
   noise(.12,'lowpass',420,.5);
   if(!soundOn||!actx)return;
@@ -1956,8 +2458,8 @@ function startSub(){
 function setHint(txt){const el=$('hint');if(txt){el.textContent=txt;el.style.opacity=1}else el.style.opacity=0}
 function buildParade(){
   parade=[];let i=0;
-  const list=curCrea().filter(c=>met.includes(c.id));
-  for(const c of list){parade.push({id:c.id,name:c.name,x:i%2?W*.78:W*.22,y:-70-i*170,dir:i%2?-1:1});i++}
+  const fin=seaN()===4,list=(fin?ALLC:curCrea()).filter(c=>met.includes(c.id)),gap=fin?120:170;if(sub)sub.dur=fin?26:14;
+  for(const c of list){parade.push({id:c.id,name:c.name,x:i%2?W*.78:W*.22,y:-70-i*gap,dir:i%2?-1:1});i++}
   if(met.includes('ebi'))for(let k=0;k<5;k++)parade.push({id:'ebi',x:W*(.15+Math.random()*.7),y:-70-i*170-k*30,ph:Math.random()*6});
 }
 function stepSub(dt){
@@ -1970,7 +2472,7 @@ function stepSub(dt){
     if(s.pt>=1.3){s.phase='up';s.pt=0;buildParade();whaleSong();
       showToast('<b>浮上</b>出会った生き物たちが、見送ってくれています',3200)}
   }else if(s.phase==='up'){
-    const p=Math.min(1,s.pt/14),ep=ease(p);
+    const p=Math.min(1,s.pt/(s.dur||14)),ep=ease(p);
     depthK=s.k0+(-.12-s.k0)*ep;
     $('depth').textContent=Math.max(0,Math.round(s.d0*(1-ep)));
     for(const m of motes){m.y+=dt*.3;if(m.y>1)m.y-=1}
@@ -1991,18 +2493,21 @@ function hitSub(px,py){
   pops.push({x:s.x,y:s.y-s.S*.45,life:1,txt:'ガチャン',col:'#ffe6a8'});
 }
 function showEnd(){
+  const fin=seaN()===4;
   returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
+  document.querySelector('#endc .t').textContent=fin?'5つの海をめぐりました':'おかえりなさい';document.querySelector('#endc .t').style.fontSize=fin?'22px':'';
+  document.querySelector('#endc .s').innerHTML=fin?'はじまりの海から、いちばん深い海溝まで。<br>ぜんぶの海の旅が終わりました':'深海探査機に乗って、<br>海の上まで帰ってきました';
   $('eScore').textContent=score;$('eMet').textContent=met.length+' / '+ZTOTAL;$('eRet').textContent=returns+' 回目';
-  $('eNext').textContent=seaB()?'つぎの海には、前とはちがう生き物たちがすんでいるようです…':'つぎの海では、なつかしい生き物たちが待っています';
+  $('eNext').textContent=fin?'つぎは、もう一度「はじまりの海」から。なつかしい生き物たちが待っています':'つぎの海は「'+SEANAMES[seaN()]+'」。'+['なつかしい生き物たちが待っています','前とはちがう、こわい顔の生き物たちがいるようです…','冷たい海の、ふしぎな生き物たちがいるようです','海の底に、湖があるといううわさです…','いちばん深い、さいごの海です'][seaN()];
   $('endc').classList.add('show');happy();
 }
 function restart(){
   $('endc').classList.remove('show');
   evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;
-  SEQ=seaB()?SEQ2:SEQ1;score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];
+  SEQ=SEQS[seaN()];score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];
   for(let i=0;i<7;i++){spawn();const b=bubbles[bubbles.length-1];b.y=H*(.3+Math.random()*.7);b.born=1}
   $('ev').hidden=true;setHint('');update();
-  showToast(seaB()?'<b>'+(returns+1)+' 回目の海へ</b>なんだか前とはちがう気配…。こわい顔の魚や、ふしぎな生き物がいるようです':'<b>ふたたび海へ</b>なつかしい生き物たちの海に、もう一度もぐっていこう',3600);
+  showToast('<b>'+SEANAMES[seaN()]+'へ</b>'+['なつかしい生き物たちの海に、もう一度もぐっていこう','なんだか前とはちがう気配…。こわい顔の魚や、ふしぎな生き物がいるようです','浅い砂地から、凍えるように冷たい南極の深海へ','この海の底には、ふしぎな湖があるそうです','5つめの、さいごの海。世界でいちばん深い海溝へ'][seaN()],3800);
 }
 function drawParade(t){
   for(const q of parade){
@@ -2123,6 +2628,7 @@ function hit(px,py){
   if(hitBlob(px,py))return;
   if(hitHoya(px,py))return;
   if(hitBone(px,py))return;
+  if(evt&&EV[evt.kind]&&EV[evt.kind].hit(px,py))return;
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i],dx=px-b.x,dy=py-b.y;
     if(dx*dx+dy*dy<=(b.r+10)**2){
@@ -2222,7 +2728,7 @@ function frame(now){
   const c=cfg(),t=now/1000;
   stepEvent(dt);
   spawnT-=dt;
-  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily'||evt.kind==='blob'||evt.kind==='hoya'||evt.kind==='bone')){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
+  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily'||evt.kind==='blob'||evt.kind==='hoya'||evt.kind==='bone'||(EV[evt.kind]&&EV[evt.kind].bubbles))){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
   for(const m of motes){m.y-=m.v*dt;if(m.y<0)m.y+=1}
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i];b.born=Math.min(1,b.born+dt*2.5);
@@ -2241,7 +2747,7 @@ function frame(now){
   drawWhale(t);drawDeme(t);
   stepCreature(dt);drawCreature(t);
   drawGlow();
-  drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawBone(t);drawTents(t);
+  drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawBone(t);if(evt&&EV[evt.kind])EV[evt.kind].draw(t);drawTents(t);
   drawParade(t);drawSurface(t);drawSub(t);
   for(const b of bubbles)drawBubble(b);
   drawSlime();
@@ -2259,7 +2765,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 update();
-if(seaB())setTimeout(()=>{if(!evt&&!paused)showToast('<b>'+(returns+1)+' 回目の海</b>深くもぐると、前とはちがう生き物たちに会えます',3200)},1200);
+if(seaN()>0)setTimeout(()=>{if(!evt&&!paused)showToast('<b>'+SEANAMES[seaN()]+'</b>'+(seaN()+1)+' つめの海。深くもぐると、ここだけの生き物たちに会えます',3200)},1200);
 requestAnimationFrame(frame);
 })();
 </script>
