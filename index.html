@@ -836,7 +836,7 @@ const SEQ1=['whale','vent','deme','glow','blob','lily','squid','hoya','vent','tr
 const SEQ2=['whale','vent','deme','bone','glow','blob','lily','squid','hoya','treasure'];   // 2nd sea: the bone forest
 const SEQS=[SEQ1,SEQ2,
   ['garden','whale','vent','krill','deme','glow','lily','squid','hoya','treasure'],
-  ['garden','whale','vent','brine','deme','glow','blob','squid','bone','treasure'],
+  ['garden','whale','vent','brine','deme','glow','phro','blob','squid','bone','treasure'],
   ['garden','whale','vent','amphi','deme','glow','bone','squid','hoya','treasure']];
 let SEQ=SEQS[seaN()];
 const EV={};   // events added for the 3rd-5th seas register themselves here
@@ -2458,6 +2458,133 @@ function chomp(){
   o.type='sine';o.frequency.setValueAtTime(160,n);o.frequency.exponentialRampToValueAtTime(80,n+.12);
   g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.2,n+.01);g.gain.exponentialRampToValueAtTime(.0001,n+.2);
   o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.25);
+}
+
+/* ---- オオタルマワシのゆりかご (4th sea): a big Phronima pushes its see-through barrel.
+   Tap the water and she swims there; tap the barrel and it rolls, and her babies tumble
+   out. Tap a baby and it swims home into the barrel. ---- */
+let phro=null;
+function phroS(){return Math.max(70,Math.min(118,Math.min(W,H)*.22))}
+EV.phro={len:30,lb:['あかちゃん','ひき'],bubbles:false,
+  start(){
+    const S=phroS();
+    phro={S,x:-S*1.6,y:H*.52,tx:W*.5,ty:H*.52,vx:0,vy:0,dir:1,rot:0,spin:0,hits:0,babies:[],auto:4,inside:14,bob:Math.random()*6,wave:0};
+    const first=meet('taru');happy();
+    showToast('<b>オオタルマワシのゆりかご'+(first?'<br>はじめまして！':'')+'</b>すき通ったタルは、赤ちゃんを育てるゆりかご。水にふれると、そこへ押していきます。タルにふれると…？',4200);
+  },
+  step(dt){
+    const p=phro,e=evt;if(!p)return;
+    const fin=e.t>e.len-3.2;
+    if(fin){p.tx=W+p.S*2.2;p.ty=H*.45;for(const b of p.babies)b.home=true}
+    // swim toward the target, pushing the barrel ahead
+    const dx=p.tx-p.x,dy=p.ty-p.y,d=Math.hypot(dx,dy),sp=fin?260:Math.min(170,d*1.4);
+    const ax=d>1?dx/d*sp:0,ay=d>1?dy/d*sp:0;
+    p.vx+=(ax-p.vx)*Math.min(1,dt*2.2);p.vy+=(ay-p.vy)*Math.min(1,dt*2.2);
+    p.x+=p.vx*dt;p.y+=p.vy*dt;p.bob+=dt;
+    if(Math.abs(p.vx)>12)p.dir+=((p.vx>0?1:-1)-p.dir)*Math.min(1,dt*3);
+    p.rot+=p.spin*dt*9;p.spin*=Math.pow(.18,dt);p.wave=Math.max(0,p.wave-dt);
+    // now and then a baby or two peeks out on their own
+    if(!fin&&p.inside>0){p.auto-=dt;if(p.auto<=0&&p.babies.length<4){p.auto=5+Math.random()*3;phroRelease(1+(Math.random()<.5?1:0))}}
+    for(let i=p.babies.length-1;i>=0;i--){const b=p.babies[i];b.ph+=dt;
+      if(b.home){const hx=p.x-b.x,hy=p.y-b.y,hd=Math.hypot(hx,hy),s=fin?420:200;
+        b.vx+=(hx/(hd||1)*s-b.vx)*Math.min(1,dt*4);b.vy+=(hy/(hd||1)*s-b.vy)*Math.min(1,dt*4);
+        if(hd<p.S*.35){p.babies.splice(i,1);p.inside++;
+          if(b.saved&&!fin){score+=2;evt.n++;$('evn').textContent=evt.n;pops.push({x:p.x,y:p.y-p.S*.75,life:.9,txt:'おかえり +2',col:'#ffd6dc'});blip();update()}
+          continue}}
+      else{b.t-=dt;if(b.t<=0){b.t=.8+Math.random()*1.4;const a=Math.random()*TAU;b.wx=Math.cos(a)*40;b.wy=Math.sin(a)*30}
+        // stay within a playful distance of mum, and on screen
+        const hx=p.x-b.x,hy=p.y-b.y,hd=Math.hypot(hx,hy),pull=hd>p.S*2.6?.9:0;
+        b.vx+=(b.wx+hx*pull-b.vx)*Math.min(1,dt*1.5);b.vy+=(b.wy+hy*pull-b.vy)*Math.min(1,dt*1.5);
+        if(b.x<20)b.vx+=60*dt*10;if(b.x>W-20)b.vx-=60*dt*10;if(b.y<110)b.vy+=60*dt*10;if(b.y>H-60)b.vy-=60*dt*10;
+        b.life-=dt;if(b.life<=0)b.home=true}
+      b.x+=b.vx*dt;b.y+=b.vy*dt}
+  },
+  hit(px,py){
+    const p=phro;if(!p||evt.t>evt.len-3.2)return false;
+    for(const b of p.babies){if(b.home)continue;const r=b.s*1.4+20;
+      if((px-b.x)**2+(py-b.y)**2<=r*r){b.home=true;b.saved=true;pops.push({x:b.x,y:b.y-18,life:.7,txt:'ぴょこ',col:'#ffe0e6'});return true}}
+    const dx=(px-p.x)/(p.S*.62+18),dy=(py-p.y)/(p.S*.48+18);
+    if(dx*dx+dy*dy<=1){
+      p.spin=1;p.hits++;p.wave=.6;score+=1;update();
+      pops.push({x:p.x,y:p.y-p.S*.7,life:.9,txt:'ぐるん +1',col:'#c8f4ff'});noise(.25,'bandpass',700,.18);
+      if(p.hits%2===0)phroRelease(2+Math.floor(Math.random()*2));
+      return true}
+    // tap the water: she pushes the cradle over there
+    p.tx=Math.max(p.S*.8,Math.min(W-p.S*.8,px));p.ty=Math.max(150,Math.min(H-p.S*.6-80,py));
+    bits.push({ring:1,x:px,y:py,r:14,life:1,pearl:false});
+    return true;
+  },
+  draw(t){
+    const p=phro;if(!p)return;const e=evt,a=evFade(e,1,1.2);if(a<=0)return;
+    cx.save();cx.globalAlpha=a;
+    for(const b of p.babies)drawPhroBaby(b,t);
+    drawPhro(p,t);
+    cx.restore();
+  },
+  end(){phro=null},
+  msg(n){return'<b>あかちゃん '+n+' ひき</b>がタルにもどりました。オオタルマワシは、ゆりかごを押して深みへ帰っていきます'}
+};
+NAMES.phro='オオタルマワシ';
+function phroRelease(k){
+  const p=phro;if(!p)return;
+  for(let i=0;i<k&&p.inside>0&&p.babies.length<12;i++){p.inside--;
+    const a=-Math.PI/2+(Math.random()-.5)*2.4,s=70+Math.random()*60;
+    p.babies.push({x:p.x+Math.cos(a)*p.S*.3,y:p.y+Math.sin(a)*p.S*.2,vx:Math.cos(a)*s,vy:Math.sin(a)*s,wx:0,wy:0,t:.6,
+      ph:Math.random()*6,s:(12+Math.random()*4)*vScale(),life:9+Math.random()*5,home:false,saved:false})}
+  if(k>0)blip();
+}
+function drawPhroBaby(b,t){
+  const s=b.s,an=Math.atan2(b.vy,b.vx);
+  cx.save();cx.translate(b.x,b.y);cx.rotate(an);
+  cx.fillStyle='rgba(255,215,205,.85)';
+  for(let i=0;i<4;i++){cx.beginPath();cx.ellipse(-s*(.15+i*.38),Math.sin(b.ph*6+i)*s*.08,s*.32,s*.24,0,0,TAU);cx.fill()}
+  cx.strokeStyle='rgba(255,180,165,.8)';cx.lineWidth=Math.max(1,s*.1);cx.lineCap='round';cx.beginPath();
+  for(let i=0;i<3;i++){const x=-s*(.1+i*.4),k=Math.sin(b.ph*14+i)*s*.15;cx.moveTo(x,s*.15);cx.lineTo(x-s*.1+k,s*.45)}
+  cx.stroke();
+  cx.fillStyle='rgba(255,228,220,.95)';cx.beginPath();cx.ellipse(s*.3,0,s*.36,s*.32,0,0,TAU);cx.fill();
+  cx.fillStyle='#c0283a';cx.beginPath();cx.ellipse(s*.38,-s*.08,s*.2,s*.16,0,0,TAU);cx.fill();
+  cx.fillStyle='rgba(255,255,255,.8)';cx.beginPath();cx.arc(s*.32,-s*.13,s*.06,0,TAU);cx.fill();
+  cx.restore();
+}
+function drawPhro(p,t){
+  const S=p.S,bob=Math.sin(p.bob*1.4)*S*.04;
+  cx.save();cx.translate(p.x,p.y+bob);
+  // a soft glow so she stands out
+  const hg=cx.createRadialGradient(0,0,0,0,0,S*1.4);hg.addColorStop(0,'rgba(190,235,255,.14)');hg.addColorStop(1,'rgba(190,235,255,0)');
+  cx.fillStyle=hg;cx.beginPath();cx.arc(0,0,S*1.4,0,TAU);cx.fill();
+  cx.scale(p.dir>=0?1:-1,1);
+  const w=S*1.15,h=S*.82,sq=1+Math.sin(p.wave*20)*.05*p.wave;
+  // the barrel (rolls: the ribs slide round)
+  cx.save();cx.scale(sq,1/sq);
+  cx.fillStyle='rgba(205,238,252,.16)';cx.strokeStyle='rgba(225,247,255,.7)';cx.lineWidth=Math.max(1.5,S*.022);
+  rr(-w/2,-h/2,w,h,h*.42);cx.fill();cx.stroke();
+  cx.save();rr(-w/2,-h/2,w,h,h*.42);cx.clip();
+  cx.strokeStyle='rgba(225,247,255,.28)';cx.lineWidth=Math.max(1,S*.014);
+  const off=((p.rot%1)+1)%1;
+  for(let i=-1;i<6;i++){const x=-w/2+(i+off)*w/5;cx.beginPath();cx.moveTo(x,-h/2);cx.quadraticCurveTo(x+w*.04,0,x,h/2);cx.stroke()}
+  cx.fillStyle='rgba(255,255,255,.18)';cx.beginPath();cx.ellipse(-w*.1,-h*.3,w*.32,h*.06,0,0,TAU);cx.fill();
+  cx.restore();
+  // the babies still inside, cuddled together
+  for(let i=0;i<Math.min(p.inside,14);i++){const gx=-w*.32+(i%7)*w*.09,gy=h*.12+Math.floor(i/7)*h*.14+Math.sin(t*2+i)*S*.01;
+    cx.fillStyle='rgba(255,205,195,.55)';cx.beginPath();cx.ellipse(gx,gy,S*.045,S*.035,0,0,TAU);cx.fill();
+    cx.fillStyle='rgba(190,40,60,.75)';cx.beginPath();cx.arc(gx+S*.02,gy-S*.012,S*.016,0,TAU);cx.fill()}
+  cx.restore();
+  // mum, half inside at the back of the barrel, legs gripping the rim
+  const mx=w*.04,my=-h*.02;
+  cx.fillStyle='rgba(255,200,185,.72)';
+  for(let i=0;i<5;i++){cx.beginPath();cx.ellipse(mx-S*.1-i*S*.07,my+S*.06+i*S*.03,S*.085,S*.065,.35,0,TAU);cx.fill()}
+  cx.strokeStyle='rgba(255,165,145,.85)';cx.lineWidth=Math.max(1.5,S*.028);cx.lineCap='round';
+  const kick=Math.sin(t*7)*S*.03;
+  cx.beginPath();
+  cx.moveTo(mx+S*.05,my+S*.05);cx.lineTo(w*.5-S*.02,-h*.32+kick);
+  cx.moveTo(mx+S*.02,my+S*.1);cx.lineTo(w*.5-S*.02,h*.3-kick);
+  for(let i=0;i<3;i++){cx.moveTo(mx-S*.12-i*S*.07,my+S*.1+i*S*.03);cx.lineTo(mx-S*.16-i*S*.07+kick,my+S*.22+i*S*.03)}
+  cx.stroke();
+  // head with the huge two-part red eyes
+  cx.fillStyle='rgba(255,222,210,.9)';cx.beginPath();cx.ellipse(mx+S*.05,my-S*.06,S*.17,S*.19,0,0,TAU);cx.fill();
+  cx.fillStyle='#b8253a';cx.beginPath();cx.ellipse(mx+S*.09,my-S*.13,S*.1,S*.08,0,0,TAU);cx.ellipse(mx-S*.02,my-S*.17,S*.08,S*.07,0,0,TAU);cx.fill();
+  cx.fillStyle='rgba(255,255,255,.75)';cx.beginPath();cx.arc(mx+S*.06,my-S*.16,S*.025,0,TAU);cx.arc(mx-S*.04,my-S*.2,S*.02,0,TAU);cx.fill();
+  cx.restore();
 }
 
 /* =====================================================================
