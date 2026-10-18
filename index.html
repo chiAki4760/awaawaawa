@@ -69,6 +69,12 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 .rbtns[hidden]{display:none}
 .rbtns .btn{font-size:15px;padding:10px 16px}
 #rAll,#rYes{border-color:rgba(255,150,140,.5);color:#ffd2cc}
+.endc.paper{background:#f4ead2;border:1px solid #d8c49c;color:#4a3826;text-align:left;transform:translate(-50%,-50%) rotate(-1.2deg);
+  box-shadow:0 10px 40px rgba(0,0,0,.45);backdrop-filter:none;padding:22px 22px 18px}
+.paper .lh{display:block;font-size:12px;letter-spacing:.12em;color:#9a7d55;margin-bottom:8px}
+.paper .lb{margin:0 0 14px;font-size:15px;line-height:2;color:#4a3826;white-space:pre-line}
+.paper .ls{display:block;text-align:right;font-size:14px;color:#7a5a3a;margin-bottom:12px}
+.paper .btn{display:block;margin:0 auto;color:#5a4128;background:rgba(120,90,50,.1);border-color:rgba(120,90,50,.35)}
 .endc .go{font-size:16px;padding:10px 22px;background:rgba(191,243,240,.16);border-color:rgba(191,243,240,.45)}
 </style>
 </head>
@@ -95,9 +101,15 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 <div class="endc" id="endc" role="dialog" aria-label="おかえりなさい">
   <b class="t">おかえりなさい</b>
   <p class="s">深海探査機に乗って、<br>海の上まで帰ってきました</p>
-  <dl><dt>この旅ではじいた泡</dt><dd id="eScore">0</dd><dt>であった生き物</dt><dd id="eMet">0</dd><dt>海から帰ったのは</dt><dd id="eRet">1 回目</dd></dl>
+  <dl><dt>この旅ではじいた泡</dt><dd id="eScore">0</dd><dt>であった生き物</dt><dd id="eMet">0</dd><dt>海から帰ったのは</dt><dd id="eRet">1 回目</dd><dt>とどいた手紙</dt><dd id="eLet">0</dd></dl>
   <p class="s" id="eNext" style="margin-top:-6px"></p>
   <button class="btn go" id="again" type="button">もう一度もぐる</button>
+</div>
+<div class="endc paper" id="letterc" role="dialog" aria-label="ボトルメール">
+  <span class="lh" id="lHead">びんの中の手紙</span>
+  <p class="lb" id="lBody"></p>
+  <span class="ls" id="lSign">ナギ</span>
+  <button class="btn" id="lClose" type="button">たたんで、しまう</button>
 </div>
 <div class="endc" id="resetc" role="dialog" aria-label="きろくのリセット">
   <b class="t" style="font-size:22px">きろくのリセット</b>
@@ -2501,13 +2513,13 @@ function showEnd(){
   returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
   document.querySelector('#endc .t').textContent=fin?'5つの海をめぐりました':'おかえりなさい';document.querySelector('#endc .t').style.fontSize=fin?'22px':'';
   document.querySelector('#endc .s').innerHTML=fin?'はじまりの海から、いちばん深い海溝まで。<br>ぜんぶの海の旅が終わりました':'深海探査機に乗って、<br>海の上まで帰ってきました';
-  $('eScore').textContent=score;$('eMet').textContent=met.length+' / '+ZTOTAL;$('eRet').textContent=returns+' 回目';
+  $('eScore').textContent=score;$('eMet').textContent=met.length+' / '+ZTOTAL;$('eRet').textContent=returns+' 回目';$('eLet').textContent=Math.min(letters,LETTERS.length)+' / '+LETTERS.length;
   $('eNext').textContent=fin?'つぎは、もう一度「はじまりの海」から。なつかしい生き物たちが待っています':'つぎの海は「'+SEANAMES[seaN()]+'」。'+['なつかしい生き物たちが待っています','前とはちがう、こわい顔の生き物たちがいるようです…','冷たい海の、ふしぎな生き物たちがいるようです','海の底に、湖があるといううわさです…','いちばん深い、さいごの海です'][seaN()];
   $('endc').classList.add('show');happy();
 }
 function restart(){
   $('endc').classList.remove('show');
-  evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;
+  evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;bottle=null;
   SEQ=SEQS[seaN()];score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];
   for(let i=0;i<7;i++){spawn();const b=bubbles[bubbles.length-1];b.y=H*(.3+Math.random()*.7);b.born=1}
   $('ev').hidden=true;setHint('');update();
@@ -2598,15 +2610,15 @@ $('again').onclick=e=>{e.stopPropagation();restart()};
 /* ---- reset the saved records (best score only, or everything) ---- */
 let rKind=null,rWasPaused=false;
 function rOpen(){rWasPaused=paused;paused=true;rKind=null;$('rChoose').hidden=false;$('rConfirm').hidden=true;
-  $('rMsg').innerHTML='どれを消しますか？<br>最高記録 '+best+' ・ 図鑑 '+met.length+' / '+ZTOTAL+' ・ 帰還 '+returns+' 回';$('resetc').classList.add('show')}
+  $('rMsg').innerHTML='どれを消しますか？<br>最高記録 '+best+' ・ 図鑑 '+met.length+' / '+ZTOTAL+' ・ 帰還 '+returns+' 回 ・ 手紙 '+Math.min(letters,LETTERS.length)+' / '+LETTERS.length;$('resetc').classList.add('show')}
 function rClose(){$('resetc').classList.remove('show');paused=rWasPaused;if(!paused)t0=performance.now()}
 function rAsk(kind){rKind=kind;$('rChoose').hidden=true;$('rConfirm').hidden=false;
-  $('rMsg').innerHTML=kind==='best'?'最高記録を 0 にもどします。<br>図鑑や宝はそのままです':'最高記録・図鑑・集めた宝・帰還回数を<br>ぜんぶ消して、1 回目の海からやり直します。<br>もとにはもどせません'}
+  $('rMsg').innerHTML=kind==='best'?'最高記録を 0 にもどします。<br>図鑑や宝はそのままです':'最高記録・図鑑・集めた宝・帰還回数・手紙を<br>ぜんぶ消して、1 回目の海からやり直します。<br>もとにはもどせません'}
 function rDo(){
-  const keys=rKind==='best'?['awa-best']:['awa-best','awa-met','awa-takara','awa-return'];
+  const keys=rKind==='best'?['awa-best']:['awa-best','awa-met','awa-takara','awa-return','awa-letters'];
   for(const k of keys){try{localStorage.removeItem(k)}catch(e){}}
   best=0;
-  if(rKind==='all'){met=[];takara=0;returns=0;showMet();$('resetc').classList.remove('show');paused=false;$('pause').textContent='ひと休み';
+  if(rKind==='all'){met=[];takara=0;returns=0;letters=0;bottle=null;showMet();$('resetc').classList.remove('show');paused=false;$('pause').textContent='ひと休み';
     restart();showToast('<b>リセットしました</b>まっさらな気持ちで、1 回目の海へ',3000);return}
   update();rClose();showToast('<b>最高記録をリセットしました</b>',2200);
 }
@@ -2616,11 +2628,155 @@ $('rAll').onclick=e=>{e.stopPropagation();rAsk('all')};
 $('rNo').onclick=$('rBack').onclick=e=>{e.stopPropagation();rClose()};
 $('rYes').onclick=e=>{e.stopPropagation();rDo()};
 
+/* =====================================================================
+   サプライズ: ボトルメール — not tied to the score milestones. Now and then,
+   with no warning, a glass bottle sinks down from the surface. Touch it and
+   the cork pops: inside is a letter from ナギ, a girl who lives in the
+   lighthouse. The letters arrive in order and tell one small story; the
+   last one only comes after you have ridden the submersible home once.
+   ===================================================================== */
+const LETTERS=[
+ {c:'#a9dccb',t:'この手紙をひろったひとへ。\nわたしはナギ。海のそばの、白い灯台にすんでいます。\nびんに手紙を入れて海に流すのは、これがはじめて。とどくかな。'},
+ {c:'#b9dcf5',t:'お父さんは灯台守です。毎晩、灯りがちゃんと回っているか見はっています。\nわたしはそのとなりで、海をながめるのがすき。\nきょうは、波がとてもしずかでした。'},
+ {c:'#c7ecc9',t:'ふしぎなことがあります。\n夜になると、海の底から小さな泡がぽこぽこのぼってくるの。\nお父さんは「だれかが泡であそんでいるのさ」って笑います。ほんとうかな。'},
+ {c:'#f3d3a0',t:'もしかして、あなたが泡をはじいているひと？\nだったら、きょうはたくさんのぼってきたよ。\n数えていたら、とちゅうでわからなくなりました。'},
+ {c:'#d6c9f5',t:'海の底には、どんな生き物がいますか。\n図鑑でメンダコを見ました。耳みたいなヒレが、かわいい。\nもし会えたら、よろしくと伝えてください。'},
+ {c:'#b2e3f2',t:'きのうは嵐でした。灯台がゆれて、少しこわかった。\nでもお父さんが「灯りが消えないかぎり、船はちゃんと帰ってこられる」って。\nあなたも、ちゃんと帰ってきてね。'},
+ {c:'#6f9ff0',t:'返事は来ないけれど、手紙を書くのはたのしいです。\nびんは浜でひろって、洗って使っています。\nこれは青いびん。わたしがいちばんすきな色です。'},
+ {c:'#e7f1ec',t:'このあいだ、泡がとてもきれいに光る夜がありました。\n金色の泡も、まじっていた気がします。\n海の底はまっくらだと思っていたけれど、そうでもないのかな。'},
+ {c:'#f5e08c',t:'お父さんに、深海探査機の話を聞きました。\n黄色くて、まるい窓があって、ずっと深い海までもぐれるんだって。\nいつか、わたしも乗ってみたいな。'},
+ {c:'#ffd0d8',ret:1,t:'見たよ！\nこのあいだ、黄色い船が海の上にぷかりとうかんできたの。灯台の灯りで、まるい窓がきらっと光りました。\nあれに乗っていたのは、あなた？\nおかえりなさい。また手紙、書くね。'}
+];
+/* after the story is complete, bottles still come now and then with a short note */
+const NOTES=[
+ 'きょうは灯台のてっぺんで、星をかぞえました。',
+ 'お父さんが、沖でクジラを見たって。あなたも会った？',
+ '今夜も泡がのぼってきたよ。おやすみなさい。',
+ '浜で、とても大きなイカの足あと……みたいなものを見つけました。まさかね。',
+ 'このびんが、いちばん遠くまで流れますように。',
+ '貝がらをひとつ入れておきます。耳にあてると、海の音がするよ。'
+];
+let letters=0,lDone=false,bottle=null,bottleCd=40+Math.random()*40,lWasPaused=false;
+try{letters=+localStorage.getItem('awa-letters')||0}catch(e){}
+function corkPop(){
+  if(!soundOn||!actx)return;
+  const n=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+  o.type='sine';o.frequency.setValueAtTime(380,n);o.frequency.exponentialRampToValueAtTime(1500,n+.06);
+  g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.26,n+.005);g.gain.exponentialRampToValueAtTime(.0001,n+.14);
+  o.connect(g).connect(actx.destination);o.start(n);o.stop(n+.16);
+  noise(.07,'highpass',2600,.12);
+}
+function clink(){   // a faint glassy ting so you notice something arriving
+  if(!soundOn||!actx)return;
+  [2093,3136].forEach((f,i)=>{const n=actx.currentTime+i*.06,o=actx.createOscillator(),g=actx.createGain();
+    o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,n);g.gain.exponentialRampToValueAtTime(.05,n+.005);
+    g.gain.exponentialRampToValueAtTime(.0001,n+.9);o.connect(g).connect(actx.destination);o.start(n);o.stop(n+1)});
+}
+function nextLetter(){   // which letter the next bottle carries (null = not yet)
+  if(letters<LETTERS.length){const L=LETTERS[letters];return L.ret&&returns<1?null:{i:letters,...L}}
+  return{i:-1,c:LETTERS[Math.floor(Math.random()*LETTERS.length)].c,t:NOTES[Math.floor(Math.random()*NOTES.length)]};
+}
+function spawnBottle(){
+  const L=nextLetter();if(!L){bottleCd=60;return}
+  const S=Math.max(50,Math.min(74,Math.min(W,H)*.14));
+  bottle={L,S,x:W*(.25+Math.random()*.5),y:-S*1.2,vy:Math.max(34,H/17),ph:Math.random()*6.28,age:0,open:0,opened:false,trail:0};
+  clink();
+  if(!evt)showToast('<b>あれ？</b>なにかが、上から沈んできます',2400);
+}
+function stepBottle(dt){
+  if(!bottle){
+    const busy=evt||pendingEvt||level()<1||$('endc').classList.contains('show')||$('letterc').classList.contains('show');
+    if(!busy){bottleCd-=dt;if(bottleCd<=0)spawnBottle()}
+    return;
+  }
+  const b=bottle;b.age+=dt;
+  if(b.opened){b.open+=dt;
+    if(b.open>.55&&!b.shown){b.shown=1;openLetter(b.L)}
+    if(b.open>1.3)bottle=null;
+    return;
+  }
+  b.y+=b.vy*dt;b.x+=Math.sin(b.age*.9+b.ph)*14*dt;
+  b.trail-=dt;
+  if(b.trail<=0){b.trail=.25+Math.random()*.35;const a=Math.sin(b.age*1.3+b.ph)*.4;
+    bits.push({x:b.x+Math.sin(a)*b.S*.75,y:b.y-Math.cos(a)*b.S*.75,vx:(Math.random()-.5)*12,vy:-30-Math.random()*20,r:1+Math.random()*1.8,life:1})}
+  if(b.y>H+b.S*1.4){bottle=null;bottleCd=35+Math.random()*30}   // missed — another will come
+}
+function hitBottle(px,py){
+  const b=bottle;if(!b||b.opened)return false;
+  const dx=(px-b.x)/(b.S*.55+22),dy=(py-b.y)/(b.S*.85+22);
+  if(dx*dx+dy*dy>1)return false;
+  b.opened=true;b.open=0;corkPop();
+  score+=5;update();
+  pops.push({x:b.x,y:b.y-b.S*1.1,life:1,txt:'ポンッ',col:'#ffe6a8'},{x:b.x,y:b.y-b.S*.6,life:1,txt:'+5'});
+  for(let i=0;i<16;i++){const a=Math.random()*6.28,s=40+Math.random()*100;
+    bits.push({x:b.x,y:b.y-b.S*.7,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:1+Math.random()*2.4,life:1,col:'#fff2cc'})}
+  bits.push({ring:1,x:b.x,y:b.y,r:b.S*.9,life:1,pearl:true});
+  return true;
+}
+function openLetter(L){
+  const story=L.i>=0;
+  if(story){letters=L.i+1;lDone=letters===LETTERS.length;try{localStorage.setItem('awa-letters',letters)}catch(e){}}
+  $('lHead').textContent=story?'びんの中の手紙　'+(L.i+1)+' / '+LETTERS.length:'びんの中の手紙　おまけ';
+  $('lBody').textContent=L.t;$('lSign').textContent=story?'ナギ':'ナギより';
+  lWasPaused=paused;paused=true;
+  $('letterc').classList.add('show');shimmer();noise(.35,'bandpass',3200,.06);
+  bottleCd=story?80+Math.random()*70:150+Math.random()*120;
+}
+$('lClose').onclick=e=>{e.stopPropagation();$('letterc').classList.remove('show');paused=lWasPaused;if(!paused)t0=performance.now();
+  if(lDone){lDone=false;showToast('<b>手紙がそろいました</b>ナギからの手紙 '+LETTERS.length+' 通。これからも、ときどきびんが流れてきます',3600)}};
+function drawBottle(t){
+  const b=bottle;if(!b)return;
+  const S=b.S,w=S*.62,h=S*1.35,nw=S*.22,fade=b.opened?Math.max(0,1-b.open/1.3):1;
+  cx.save();cx.globalAlpha=fade;cx.translate(b.x,b.y);
+  // soft warm halo so it stands out in the dark
+  const pulse=.6+.4*Math.sin(t*2.4);
+  const hg=cx.createRadialGradient(0,0,0,0,0,S*1.5);hg.addColorStop(0,`rgba(255,236,190,${.28*pulse})`);hg.addColorStop(1,'rgba(255,236,190,0)');
+  cx.fillStyle=hg;cx.beginPath();cx.arc(0,0,S*1.5,0,TAU);cx.fill();
+  cx.rotate(Math.sin(b.age*1.3+b.ph)*.4+.25);
+  const top=-h*.5,sh=-h*.18,bot=h*.5,nk=top+h*.22;
+  // the glass
+  cx.beginPath();
+  cx.moveTo(-nw/2,top);cx.lineTo(-nw/2,nk);
+  cx.bezierCurveTo(-nw/2,sh-h*.02,-w/2,sh-h*.06,-w/2,sh+h*.04);
+  cx.lineTo(-w/2,bot-w*.25);cx.quadraticCurveTo(-w/2,bot,-w/2+w*.25,bot);
+  cx.lineTo(w/2-w*.25,bot);cx.quadraticCurveTo(w/2,bot,w/2,bot-w*.25);
+  cx.lineTo(w/2,sh+h*.04);cx.bezierCurveTo(w/2,sh-h*.06,nw/2,sh-h*.02,nw/2,nk);
+  cx.lineTo(nw/2,top);cx.closePath();
+  const gg=cx.createLinearGradient(-w/2,0,w/2,0);
+  gg.addColorStop(0,b.L.c+'66');gg.addColorStop(.5,b.L.c+'30');gg.addColorStop(1,b.L.c+'80');
+  cx.fillStyle=gg;cx.fill();
+  cx.lineWidth=Math.max(1.4,S*.035);cx.strokeStyle=b.L.c+'dd';cx.stroke();
+  // the rolled letter inside, tied with a red string
+  cx.save();cx.rotate(-.12);
+  cx.fillStyle='#f3e6c8';const pw=w*.42,ph=h*.52,py=sh+h*.1;
+  cx.fillRect(-pw/2,py,pw,ph);
+  cx.fillStyle='rgba(150,120,80,.35)';cx.fillRect(pw/2-pw*.22,py,pw*.22,ph);
+  cx.strokeStyle='#d0484e';cx.lineWidth=Math.max(1.2,S*.03);cx.beginPath();cx.moveTo(-pw/2,py+ph*.5);cx.lineTo(pw/2,py+ph*.5);cx.stroke();
+  cx.restore();
+  // shine on the glass
+  cx.strokeStyle='rgba(255,255,255,.55)';cx.lineWidth=Math.max(1.5,S*.05);cx.lineCap='round';
+  cx.beginPath();cx.moveTo(-w*.3,sh+h*.1);cx.lineTo(-w*.3,bot-h*.12);cx.stroke();
+  // the cork (flies off when opened)
+  const cy=b.opened?-b.open*S*2.4:0,cr=b.opened?b.open*5:0;
+  cx.save();cx.translate(0,top+cy);cx.rotate(cr);
+  cx.fillStyle='#b98a58';cx.fillRect(-nw*.62,-h*.12,nw*1.24,h*.15);
+  cx.fillStyle='rgba(90,60,30,.35)';cx.fillRect(-nw*.62,-h*.12,nw*1.24,h*.035);
+  cx.restore();
+  cx.restore();
+  // a little twinkle on the shoulder
+  if(!b.opened){const k=Math.max(0,Math.sin(t*3.1+b.ph));
+    if(k>.2){const sx=b.x-S*.2,sy=b.y-S*.25,r=S*.22*k;
+      cx.save();cx.globalAlpha=k*.9;cx.fillStyle='#fffbe8';cx.beginPath();
+      cx.moveTo(sx,sy-r);cx.quadraticCurveTo(sx,sy,sx+r,sy);cx.quadraticCurveTo(sx,sy,sx,sy+r);
+      cx.quadraticCurveTo(sx,sy,sx-r,sy);cx.quadraticCurveTo(sx,sy,sx,sy-r);cx.fill();cx.restore()}}
+}
+
 /* ---- tapping ---- */
 let lastLevel=0,hintGone=false;
 function hit(px,py){
   if(paused)return;
   if(evt&&evt.kind==='sub'){hitSub(px,py);return}
+  if(hitBottle(px,py))return;
   if(evt&&evt.kind==='glow')plankRing(px,py);
   if(hitCreature(px,py))return;
   if(hitTube(px,py))return;
@@ -2752,7 +2908,7 @@ function frame(now){
   stepCreature(dt);drawCreature(t);
   drawGlow();
   drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawBone(t);if(evt&&EV[evt.kind])EV[evt.kind].draw(t);drawTents(t);
-  drawParade(t);drawSurface(t);drawSub(t);
+  drawParade(t);drawSurface(t);drawSub(t);stepBottle(dt);drawBottle(t);
   for(const b of bubbles)drawBubble(b);
   drawSlime();
   for(const s of shrimps)drawShrimp(s);
