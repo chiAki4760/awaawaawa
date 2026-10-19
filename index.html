@@ -35,6 +35,13 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 .side{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .depth{font-size:13px;color:var(--soft);font-variant-numeric:tabular-nums;text-align:right;line-height:1.5}
 .depth b{color:var(--ink);font-weight:700;font-size:15px}
+.seas{display:flex;align-items:center;justify-content:flex-end;gap:7px;font-size:11px;color:var(--soft);letter-spacing:.04em}
+.seas .dots{display:flex;gap:6px}
+.seas i{width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(232,251,250,.55);box-sizing:border-box;display:block}
+.seas i.done{background:rgba(232,251,250,.7);border-color:transparent}
+.seas i.now{width:10px;height:10px;margin:-1px 0;background:#fff;border-color:transparent;box-shadow:0 0 8px var(--glow);animation:seaPulse 2.4s ease-in-out infinite}
+@keyframes seaPulse{50%{box-shadow:0 0 2px var(--glow);opacity:.75}}
+@media (prefers-reduced-motion:reduce){.seas i.now{animation:none}}
 .meter{width:96px;height:4px;border-radius:2px;background:var(--glass);overflow:hidden}
 .meter i{display:block;height:100%;width:0;background:var(--glow);transition:width .4s ease}
 .btns{display:flex;gap:8px;pointer-events:auto}
@@ -87,6 +94,7 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 <div class="hud">
   <div class="count"><span class="num" id="score">0</span><span class="lbl">はじけた泡</span><span class="nx" id="nx">つぎのできごとまで 50</span></div>
   <div class="side">
+    <div class="seas" id="seas" aria-label="いまの海"><span id="seaName"></span><span class="dots"><i></i><i></i><i></i><i></i><i></i></span></div>
     <div class="depth">水深 <b id="depth">2</b> m<br><span id="best">きろく 0</span><br><span id="zukan">であった生き物 0 / 13</span></div>
     <div class="meter" aria-hidden="true"><i id="bar"></i></div>
     <div class="btns">
@@ -3111,7 +3119,14 @@ function burst(b){
   bits.push({ring:1,x:b.x,y:b.y,r:b.r,life:1,pearl:b.pearl,col});
 }
 
+function showSeas(){
+  const n=seaN(),lap=Math.floor(returns/5)+1;
+  document.querySelectorAll('#seas i').forEach((d,i)=>d.className=i<n?'done':i===n?'now':'');
+  $('seaName').textContent=(lap>1?lap+'周目・':'')+SEANAMES[n];
+  $('seas').setAttribute('aria-label','いまの海 '+(n+1)+' / 5 '+SEANAMES[n]);
+}
 function update(){
+  showSeas();
   $('score').textContent=score;
   const L=level();
   $('depth').textContent=2+L*8;
