@@ -2717,7 +2717,7 @@ EV.harp={len:26,lb:['えさ','こ'],bubbles:true,
   step(dt){
     const e=evt,fin=e.t>e.len-3,t=performance.now()/1000;
     for(const hp of harps){hp.g=Math.min(1,hp.g+dt*.6);hp.glow=Math.max(0,hp.glow-dt*.6);
-      for(let i=hp.meals.length-1;i>=0;i--){const m=hp.meals[i];m.t+=dt;if(m.t>9)hp.meals.splice(i,1)}}
+      for(let i=hp.meals.length-1;i>=0;i--){const m=hp.meals[i];m.t+=dt;if(m.t>15)hp.meals.splice(i,1)}}
     e.pT-=dt;if(e.pT<=0&&!fin&&hprey.length<14){e.pT=.6+Math.random()*.8;hprey.push(newPrey(false))}
     for(let i=hprey.length-1;i>=0;i--){const p=hprey[i];p.ph+=dt;
       if(p.go){const b=p.go,dx=b.tx-p.x,dy=(b.ty+(b.by-b.ty)*.3)-p.y,d=Math.hypot(dx,dy)||1;
@@ -2760,9 +2760,7 @@ EV.harp={len:26,lb:['えさ','こ'],bubbles:true,
         cx.fillStyle=g;cx.beginPath();cx.arc(b.tx,b.ty,r*(3+gl*3),0,TAU);cx.fill();cx.restore();
         cx.fillStyle='#f6efe4';cx.beginPath();cx.arc(b.tx,b.ty,r,0,TAU);cx.fill()}
       // meals wrapped up on the branches, slowly digested
-      for(const m of hp.meals){const b=br.find(q=>q.v===m.v&&q.i===m.b);if(!b)continue;const k=Math.max(0,1-m.t/9),x=b.tx+(b.bx-b.tx)*.3,y=b.ty+(b.by-b.ty)*.3;
-        cx.fillStyle=`rgba(255,190,170,${.9*k})`;cx.beginPath();cx.ellipse(x,y,6*vs*(.5+.5*k),8*vs*(.5+.5*k),0,0,TAU);cx.fill();
-        cx.strokeStyle=`rgba(255,255,250,${.7*k})`;cx.lineWidth=1.2;cx.stroke()}
+      for(const m of hp.meals){const b=br.find(q=>q.v===m.v&&q.i===m.b);if(!b)continue;drawMeal(m,b,t,vs)}
     }
     for(const p of hprey){const an=Math.atan2(p.vy,p.vx),S=p.s;
       cx.save();cx.translate(p.x,p.y);cx.rotate(an);
@@ -2777,6 +2775,32 @@ EV.harp={len:26,lb:['えさ','こ'],bubbles:true,
   end(){harps=[];hprey=[]},
   msg(n){return'<b>えさ '+n+' こ</b>をハープ海綿にあげました。白い竪琴は、またしずかに次のえさを待っています'}
 };
+/* a caught meal: the prey twitches on the hooks, a thin film creeps out along the branch
+   and closes over it, then the little parcel is slowly digested */
+function drawMeal(m,b,t,vs){
+  const x=b.tx+(b.bx-b.tx)*.3,y=b.ty+(b.by-b.ty)*.3,an=Math.atan2(b.ty-b.by,b.tx-b.bx),L=Math.hypot(b.tx-b.bx,b.ty-b.by);
+  const wrap=ease(Math.max(0,Math.min(1,(m.t-.5)/3))),shrink=Math.max(0,Math.min(1,(m.t-5)/10)),fade=1-shrink;
+  // the prey itself, struggling at first, dimming as it is covered
+  const pa=Math.max(0,1-wrap*.75-shrink*.25)*fade,tw=Math.max(0,1-m.t/3)*Math.sin(t*28)*.5;
+  if(pa>.02){const S=7*vs*(1-shrink*.6);cx.save();cx.globalAlpha*=pa;cx.translate(x+S*.8,y);cx.rotate(.4+tw);
+    cx.fillStyle='#ffc8c8';cx.beginPath();cx.ellipse(0,0,S,S*.5,0,0,TAU);cx.fill();
+    cx.strokeStyle='rgba(255,210,210,.9)';cx.lineWidth=1;cx.beginPath();
+    for(let k=0;k<3;k++){cx.moveTo(-S*.3+k*S*.35,S*.4);cx.lineTo(-S*.4+k*S*.35+Math.sin(t*30+k)*S*.3*(1-wrap),S*1.05)}
+    cx.moveTo(S*.8,0);cx.lineTo(S*2,-S*.7+tw*S);cx.stroke();cx.restore()}
+  if(wrap<=0)return;
+  // the film spreading along the branch from the catch
+  const sp=L*.4*wrap,c=Math.cos(an),sn=Math.sin(an);
+  cx.save();cx.lineCap='round';
+  cx.strokeStyle=`rgba(235,245,250,${.6*fade})`;cx.lineWidth=(5+8*wrap)*vs*(1-shrink*.5);
+  cx.beginPath();cx.moveTo(x-c*sp,y-sn*sp);cx.lineTo(x+c*sp*.6,y+sn*sp*.6);cx.stroke();
+  // the parcel closing over the prey
+  const R=(14+2.5*Math.sin(t*2+m.b))*vs*wrap*(1-shrink*.55),open=1-wrap;
+  const g=cx.createRadialGradient(x+R*.6,y-R*.2,1,x+R*.6,y,R*1.3);g.addColorStop(0,`rgba(255,240,236,${.75*fade})`);g.addColorStop(1,`rgba(220,236,245,${.4*fade})`);
+  cx.fillStyle=g;cx.beginPath();cx.ellipse(x+R*.55,y,R*1.1,R*.85,an,Math.PI*open*.9,TAU-Math.PI*open*.9);cx.fill();
+  cx.strokeStyle=`rgba(255,255,255,${(.55+.3*Math.sin(t*3+m.b))*fade})`;cx.lineWidth=1.2;cx.stroke();
+  if(wrap>.9){cx.strokeStyle=`rgba(255,255,255,${.25*fade})`;cx.beginPath();cx.ellipse(x+R*.55,y,R*.7,R*.5,an,0,TAU);cx.stroke()}
+  cx.restore();
+}
 function newPrey(init){
   return{x:init?W*Math.random():-20,y:H*(.25+Math.random()*.4),vx:15+Math.random()*10,vy:0,ph:Math.random()*6,s:(5.5+Math.random()*2)*vScale(),go:null,hp:null};
 }
