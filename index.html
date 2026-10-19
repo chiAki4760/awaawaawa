@@ -235,7 +235,7 @@ function tapOpen(hold){if(crTap<=0)return 0;return Math.min(1,crTap/.18)*(crTap>
 const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage'];
 const ZTOTAL=ALLC.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
-let cr=null,crT=5,pops=[],returns=0;
+let cr=null,crT=5,pops=[],returns=0,finE=null;
 try{returns=+localStorage.getItem('awa-return')||0}catch(e){}
 let evt=null,pendingEvt=null,seqI=0,nextAt=50;
 function showMet(){$('zukan').textContent='であった生き物 '+met.length+' / '+ZTOTAL}
@@ -845,7 +845,7 @@ function drawPops(dt){
 /* ---- bubbles ---- */
 let bubbles=[],bits=[],motes=[],t0=performance.now(),spawnT=0;
 function spawn(){
-  const c=cfg(),glowing=!!(evt&&evt.kind==='glow');
+  const c=cfg(),glowing=!!(evt&&evt.kind==='glow')||!!finE;
   if(bubbles.length>=c.max+(glowing?8:0))return;
   const r=c.rMin+Math.random()*(c.rMax-c.rMin);
   bubbles.push({x:r+Math.random()*(W-2*r),y:H+r+10,r,
@@ -2721,7 +2721,6 @@ function drawPhro(p,t){
    a chain of countless small animals living as one — coils across the whole screen, glowing.
    Touch it and a wave of light runs along it with a note. Near the end, every creature
    met on the five seas rises in a glowing parade, and taps burst into lights. ---- */
-let finE=null;
 const FIN_NOTES=[262,294,330,392,440,523,587,659,784,880];
 function finNote(f,v){
   if(!soundOn||!actx)return;
@@ -2742,55 +2741,8 @@ function finPath(u,t){   // a slow, wide figure the head of the chain swims alon
   return{x:W*.5+Math.sin(u*.9+t*.05)*W*.36+Math.sin(u*2.3)*W*.06,
          y:H*.5+Math.sin(u*1.7+1)*H*.24+Math.cos(u*.6)*H*.04};
 }
-EV.finale={len:44,lb:['ひかり','回'],bubbles:false,
-  start(){
-    const N=110;
-    finE={N,u:0,trail:[],pulses:[],booms:[],parade:[],pStart:false,sparks:[],dark:0,stars:[]};
-    for(let i=0;i<60;i++)finE.stars.push({x:Math.random(),y:Math.random(),s:.5+Math.random()*1.6,ph:Math.random()*6});
-    const p0=finPath(0,0);for(let i=0;i<N*3;i++)finE.trail.push({x:p0.x-i*4-W,y:p0.y});
-    bubbles.length=0;
-    const first=meet('kudakurage');finHum();
-    showToast('<b>光のフィナーレ'+(first?'<br>はじめまして！':'')+'</b>いちばん深い海の底で、明かりが消えて…。巨大なダイオウクダクラゲが、光りながらやってきました。ふれてみて',4800);
-  },
-  step(dt){
-    const f=finE,e=evt;if(!f)return;
-    const ending=e.t>e.len-3;
-    f.dark=Math.min(1,e.t/2.5)*(ending?Math.max(0,(e.len-e.t)/3):1);
-    // the head swims along the path; the body follows its trail
-    f.u+=dt*(ending?.9:.32);
-    const h=finPath(f.u,e.t);if(ending){h.x+=(e.t-(e.len-3))*W*.5}
-    f.trail.unshift({x:h.x,y:h.y});if(f.trail.length>f.N*3+2)f.trail.pop();
-    for(let i=f.pulses.length-1;i>=0;i--){const p=f.pulses[i];p.r+=dt*38;if(p.r>f.N)f.pulses.splice(i,1)}
-    for(let i=f.booms.length-1;i>=0;i--){const b=f.booms[i];b.t+=dt;if(b.t>1.8)f.booms.splice(i,1)}
-    for(let i=f.sparks.length-1;i>=0;i--){const s=f.sparks[i];s.x+=s.vx*dt;s.y+=s.vy*dt;s.vx*=.97;s.vy=s.vy*.97+18*dt;s.life-=dt*.6;if(s.life<=0)f.sparks.splice(i,1)}
-    // the grand parade of everyone met on the five seas
-    if(!f.pStart&&e.t>e.len-17){f.pStart=true;
-      let list=ALLC.filter(c=>met.includes(c.id)&&DRAW[c.id]);if(list.length<6)list=ALLC.filter(c=>DRAW[c.id]);
-      list=list.slice().sort(()=>Math.random()-.5).slice(0,16);
-      list.forEach((c,i)=>f.parade.push({id:c.id,name:c.name,x:W*(.12+((i*.37)%1)*.76),y:H+60+i*70,dir:Math.random()<.5?-1:1,ph:Math.random()*6,hue:(i*47)%360}));
-      shimmer();showToast('<b>みんなが集まってきた</b>5つの海で出会った生き物たちが、光の下に集まってきます。どこでもふれると、光がはじけます',4200)}
-    for(const q of f.parade){q.ph+=dt;q.y-=dt*(ending?140:62);q.x+=Math.sin(q.ph*.8)*12*dt}
-  },
-  hit(px,py){
-    const f=finE;if(!f||evt.t>evt.len-3)return false;
-    let best=-1,bd=1e9;
-    for(let i=0;i<f.N;i++){const p=f.trail[i*3];if(!p)break;const d=(p.x-px)**2+(p.y-py)**2;if(d<bd){bd=d;best=i}}
-    if(best>=0&&bd<(46*vScale())**2){
-      f.pulses.push({i:best,r:0,hue:(evt.t*40+best*3)%360});
-      const k=Math.floor((1-best/f.N)*FIN_NOTES.length*.999);finNote(FIN_NOTES[Math.max(0,Math.min(FIN_NOTES.length-1,k))]);
-      score+=1;evt.n++;$('evn').textContent=evt.n;update();
-      const p=f.trail[best*3];pops.push({x:p.x,y:p.y-26,life:.8,txt:'+1',col:'#c8fff0'});
-      return true}
-    if(f.pStart){   // a burst of light anywhere
-      const hue=Math.random()*360;f.booms.push({x:px,y:py,t:0,hue});
-      for(let i=0;i<34;i++){const a=i/34*TAU+Math.random()*.2,s=90+Math.random()*120;f.sparks.push({x:px,y:py,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,hue:hue+Math.random()*40})}
-      finNote(FIN_NOTES[Math.floor(Math.random()*FIN_NOTES.length)],.06);
-      score+=1;evt.n++;$('evn').textContent=evt.n;update();
-      return true}
-    return false;
-  },
-  draw(t){
-    const f=finE;if(!f)return;const e=evt;
+function finDraw(t){
+    const f=finE;if(!f)return;
     // the lights go out
     cx.fillStyle=`rgba(1,3,10,${.82*f.dark})`;cx.fillRect(0,0,W,H);
     cx.save();cx.globalCompositeOperation='lighter';
@@ -2832,11 +2784,71 @@ EV.finale={len:44,lb:['ひかり','回'],bubbles:false,
     // bursts of light
     for(const b of f.booms){const k=b.t/1.8;cx.strokeStyle=`hsla(${b.hue},100%,75%,${.7*(1-k)})`;cx.lineWidth=3*(1-k)+1;
       cx.beginPath();cx.arc(b.x,b.y,20+k*110,0,TAU);cx.stroke()}
-    for(const s of f.sparks){cx.fillStyle=`hsla(${s.hue},100%,72%,${s.life})`;cx.beginPath();cx.arc(s.x,s.y,2.4*s.life+.6,0,TAU);cx.fill()}
+    for(const s of f.sparks){cx.fillStyle=`hsla(${s.hue},100%,72%,${Math.min(1,s.life)})`;cx.beginPath();cx.arc(s.x,s.y,s.slow?2.2:2.4*s.life+.6,0,TAU);cx.fill()}
     cx.restore();
+}
+function finBurst(x,y,quiet){   // a small burst of light (bubbles popped in the glow)
+  const f=finE;if(!f)return;const hue=Math.random()*360;f.booms.push({x,y,t:0,hue});
+  for(let i=0;i<18;i++){const a=i/18*TAU,s=60+Math.random()*90;f.sparks.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,hue:hue+Math.random()*40})}
+  if(!quiet)finNote(FIN_NOTES[Math.floor(Math.random()*FIN_NOTES.length)],.045);
+}
+function finStep(dt){
+  const f=finE;if(!f)return;f.t+=dt;
+  const outro=f.t>f.len-8,o=outro?Math.min(1,(f.t-(f.len-8))/8):0,after=Math.max(0,f.t-f.len);
+  const up=!!(sub&&(sub.phase==='up'||sub.phase==='surface'));
+  // the dark stays until the submersible starts to rise, then lifts slowly
+  if(up)f.lift=Math.min(1,f.lift+dt/5);
+  f.dark=Math.min(1,f.t/2.5)*(1-f.lift);
+  // the head swims along the path, slowing and drifting upward at the end
+  f.u+=dt*(.32-.18*o);
+  const h=finPath(f.u,f.t);h.y-=ease(o)*H*.18+after*H*.05+(up?f.lift*H*.6:0);
+  f.trail.unshift({x:h.x,y:h.y});if(f.trail.length>f.N*3+2)f.trail.pop();
+  if(outro&&!up){f.pw-=dt;if(f.pw<=0){f.pw=1.6;f.pulses.push({i:0,r:0,hue:0});finNote(FIN_NOTES[Math.max(0,FIN_NOTES.length-1-f.pn%6*2)],.035);f.pn++}}
+  if(outro&&!f.said){f.said=true;showToast('<b>またね</b>光の生き物たちが、ゆっくりと深みへ帰っていきます。泡をはじきながら、見送ろう',4200)}
+  for(let i=f.pulses.length-1;i>=0;i--){const p=f.pulses[i];p.r+=dt*38;if(p.r>f.N)f.pulses.splice(i,1)}
+  for(let i=f.booms.length-1;i>=0;i--){const b=f.booms[i];b.t+=dt;if(b.t>1.8)f.booms.splice(i,1)}
+  // rising grains of light: the afterglow
+  if(f.t>f.len-12&&f.lift<.8&&Math.random()<dt*12)f.sparks.push({x:Math.random()*W,y:H+10,vx:(Math.random()-.5)*10,vy:-(28+Math.random()*34),life:2.6,hue:150+Math.random()*130,slow:1});
+  for(let i=f.sparks.length-1;i>=0;i--){const s=f.sparks[i];s.x+=s.vx*dt;s.y+=s.vy*dt+(up?115*dt:0);
+    if(s.slow){s.x+=Math.sin(s.y*.02)*8*dt;s.life-=dt*.3}else{s.vx*=.97;s.vy=s.vy*.97+18*dt;s.life-=dt*.6}
+    if(s.life<=0)f.sparks.splice(i,1)}
+  // the grand parade of everyone met on the five seas
+  if(!f.pStart&&f.t>f.len-21){f.pStart=true;
+    let list=ALLC.filter(c=>met.includes(c.id)&&DRAW[c.id]);if(list.length<6)list=ALLC.filter(c=>DRAW[c.id]);
+    list=list.slice().sort(()=>Math.random()-.5).slice(0,16);
+    list.forEach((c,i)=>f.parade.push({id:c.id,name:c.name,x:W*(.12+((i*.37)%1)*.76),y:H+60+i*70,dir:Math.random()<.5?-1:1,ph:Math.random()*6,hue:(i*47)%360}));
+    shimmer();showToast('<b>みんなが集まってきた</b>5つの海で出会った生き物たちが、光の下に集まってきます。どこでもふれると、光がはじけます',4200)}
+  for(const q of f.parade){q.ph+=dt;q.y-=dt*(up?-115:outro?34:58);q.x+=Math.sin(q.ph*.8)*12*dt}
+  if(up&&f.lift>=1)finE=null;
+}
+EV.finale={len:50,lb:['ひかり','回'],bubbles:true,
+  start(){
+    const N=110;
+    finE={N,t:0,len:EV.finale.len,lift:0,pw:0,pn:0,said:false,u:0,trail:[],pulses:[],booms:[],parade:[],pStart:false,sparks:[],dark:0,stars:[]};
+    for(let i=0;i<60;i++)finE.stars.push({x:Math.random(),y:Math.random(),s:.5+Math.random()*1.6,ph:Math.random()*6});
+    const p0=finPath(0,0);for(let i=0;i<N*3;i++)finE.trail.push({x:p0.x-i*4-W,y:p0.y});
+    bubbles.length=0;spawnT=2.5;
+    const first=meet('kudakurage');finHum();
+    showToast('<b>光のフィナーレ'+(first?'<br>はじめまして！':'')+'</b>いちばん深い海の底で、明かりが消えて…。巨大なダイオウクダクラゲが、光りながらやってきました。ふれてみて',4800);
   },
-  end(){finE=null},
-  msg(n){return'<b>ひかり '+n+' 回</b>5つの海の生き物たちが、光の中で見送ってくれました。…どこかで、探査機の音がします'}
+  step(dt){finStep(dt)},
+  hit(px,py){
+    const f=finE;if(!f)return false;
+    for(const b of bubbles)if((px-b.x)**2+(py-b.y)**2<=(b.r+10)**2){finBurst(b.x,b.y,true);return false}   // let the bubble pop
+    let best=-1,bd=1e9;
+    for(let i=0;i<f.N;i++){const p=f.trail[i*3];if(!p)break;const d=(p.x-px)**2+(p.y-py)**2;if(d<bd){bd=d;best=i}}
+    if(best>=0&&bd<(46*vScale())**2){
+      f.pulses.push({i:best,r:0,hue:(f.t*40+best*3)%360});
+      const k=Math.floor((1-best/f.N)*FIN_NOTES.length*.999);finNote(FIN_NOTES[Math.max(0,Math.min(FIN_NOTES.length-1,k))]);
+      score+=1;evt.n++;$('evn').textContent=evt.n;update();
+      const p=f.trail[best*3];pops.push({x:p.x,y:p.y-26,life:.8,txt:'+1',col:'#c8fff0'});
+      return true}
+    if(f.pStart){finBurst(px,py);score+=1;evt.n++;$('evn').textContent=evt.n;update();return true}
+    return false;
+  },
+  draw(t){finDraw(t)},
+  end(){pendingEvt={kind:'sub',wait:3};seqI++},   // the glow stays on while the submersible comes down
+  msg(n){return'<b>ひかり '+n+' 回</b>5つの海の生き物たちが、光の中で見送ってくれています。…上から、探査機の明かりがおりてきます'}
 };
 NAMES.finale='光のフィナーレ';
 
@@ -3096,6 +3108,7 @@ function hitSub(px,py){
   if(dx*dx+dy*dy>1)return;
   s.phase='board';s.pt=0;setHint('');happy();knock();
   pops.push({x:s.x,y:s.y-s.S*.45,life:1,txt:'ガチャン',col:'#ffe6a8'});
+  return true;
 }
 function showEnd(){
   const fin=!volc&&seaN()===4;let opened=false;
@@ -3121,7 +3134,7 @@ function showEnd(){
 }
 function restart(){
   $('endc').classList.remove('show');
-  evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;bottle=null;
+  evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;bottle=null;finE=null;
   SEQ=volc?SEQV:SEQS[seaN()];score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];rocks=[];
   for(let i=0;i<7;i++){spawn();const b=bubbles[bubbles.length-1];b.y=H*(.3+Math.random()*.7);b.born=1}
   $('ev').hidden=true;setHint('');update();
@@ -3379,7 +3392,7 @@ function drawBottle(t){
 let lastLevel=0,hintGone=false;
 function hit(px,py){
   if(paused)return;
-  if(evt&&evt.kind==='sub'){hitSub(px,py);return}
+  if(evt&&evt.kind==='sub'){if(hitSub(px,py))return;if(!(finE&&sub&&(sub.phase==='down'||sub.phase==='wait')))return}
   if(hitBottle(px,py))return;
   if(evt&&evt.kind==='glow')plankRing(px,py);
   if(hitCreature(px,py))return;
@@ -3396,9 +3409,9 @@ function hit(px,py){
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i],dx=px-b.x,dy=py-b.y;
     if(dx*dx+dy*dy<=(b.r+10)**2){
-      burst(b);bubbles.splice(i,1);pop(b.pearl||b.glow);
+      burst(b);bubbles.splice(i,1);pop(b.pearl||b.glow);if(finE&&!(evt&&evt.kind==='finale'))finBurst(b.x,b.y,true);
       score+=b.pearl?5:b.glow?2:1;
-      if(evt&&(evt.kind==='whale'||evt.kind==='deme'||(evt.kind==='glow'&&b.glow))){evt.n++;$('evn').textContent=evt.n}
+      if(evt&&(evt.kind==='whale'||evt.kind==='deme'||evt.kind==='finale'||(evt.kind==='glow'&&b.glow))){evt.n++;$('evn').textContent=evt.n}
       update();
       if(!hintGone){hintGone=true;$('hint').style.opacity=0}
       return;
@@ -3512,9 +3525,9 @@ function frame(now){
   if(paused)dt=0;
   if(reduce)dt*=.6;
   const c=cfg(),t=now/1000;
-  stepEvent(dt);
+  stepEvent(dt);if(finE&&!(evt&&evt.kind==='finale'))finStep(dt);
   spawnT-=dt;
-  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily'||evt.kind==='blob'||evt.kind==='hoya'||evt.kind==='bone'||(EV[evt.kind]&&EV[evt.kind].bubbles))){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
+  if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily'||evt.kind==='blob'||evt.kind==='hoya'||evt.kind==='bone'||(EV[evt.kind]&&EV[evt.kind].bubbles)||(finE&&evt.kind==='sub'&&sub&&(sub.phase==='down'||sub.phase==='wait')))){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
   for(const m of motes){m.y-=m.v*dt;if(m.y<0)m.y+=1}
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i];b.born=Math.min(1,b.born+dt*2.5);
@@ -3533,7 +3546,7 @@ function frame(now){
   drawWhale(t);drawDeme(t);
   stepCreature(dt);drawCreature(t);
   drawGlow();
-  drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawBone(t);if(evt&&EV[evt.kind])EV[evt.kind].draw(t);drawTents(t);
+  drawTreasure(t);drawLily(t);drawBlob(t);drawHoya(t);drawBone(t);if(evt&&EV[evt.kind])EV[evt.kind].draw(t);else if(finE)finDraw(t);drawTents(t);
   drawParade(t);drawSurface(t);drawSub(t);stepBottle(dt);drawBottle(t);
   for(const b of bubbles)drawBubble(b);
   drawSlime();
