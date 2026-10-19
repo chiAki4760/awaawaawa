@@ -85,6 +85,12 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 .paper .ls{display:block;text-align:right;font-size:14px;color:#7a5a3a;margin-bottom:12px}
 .paper .btn{display:block;margin:0 auto;color:#5a4128;background:rgba(120,90,50,.1);border-color:rgba(120,90,50,.35)}
 .endc .go{font-size:16px;padding:10px 22px;background:rgba(191,243,240,.16);border-color:rgba(191,243,240,.45)}
+.endc .go.volc{display:block;margin:10px auto 0;background:rgba(255,110,50,.22);border-color:rgba(255,150,90,.65);color:#ffe0cc;box-shadow:0 0 18px rgba(255,110,50,.35);animation:volcPulse 2.2s ease-in-out infinite}
+@keyframes volcPulse{50%{box-shadow:0 0 4px rgba(255,110,50,.2)}}
+.endc .tot{font-size:12px;color:var(--soft);margin:-8px 0 14px}
+.endc .tot i{display:block;height:5px;border-radius:3px;background:rgba(255,255,255,.1);margin:5px auto 0;width:180px;overflow:hidden}
+.endc .tot i b{display:block;height:100%;width:0;background:linear-gradient(90deg,#ffb27a,#ff5a2a);transition:width 1.6s ease}
+.endc.hot{background:rgba(48,14,8,.8);border-color:rgba(255,150,90,.4)}
 </style>
 </head>
 <body>
@@ -112,8 +118,10 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
   <b class="t">おかえりなさい</b>
   <p class="s">深海探査機に乗って、<br>海の上まで帰ってきました</p>
   <dl><dt>この旅ではじいた泡</dt><dd id="eScore">0</dd><dt>であった生き物</dt><dd id="eMet">0</dd><dt>海から帰ったのは</dt><dd id="eRet">1 回目</dd><dt>とどいた手紙</dt><dd id="eLet">0</dd></dl>
+  <div class="tot" id="eTot"></div>
   <p class="s" id="eNext" style="margin-top:-6px"></p>
   <button class="btn go" id="again" type="button">もう一度もぐる</button>
+  <button class="btn go volc" id="volcGo" type="button" hidden>海底火山へもぐる</button>
 </div>
 <div class="endc paper" id="letterc" role="dialog" aria-label="ボトルメール">
   <span class="lh" id="lHead">びんの中の手紙</span>
@@ -204,11 +212,22 @@ const CREA5=[
  {id:'atolla',name:'ムラサキカムリクラゲ',from:5,note:'おそわれると、ふちの光をくるくる回して、まわりに知らせるクラゲ',pop:'ピカピカ'}
 ];
 const CREAS=[CREA,CREA2,CREA3,CREA4,CREA5];
-const ALLC=[].concat(...CREAS);
+/* the secret dungeon: the undersea volcano (opens after 4000 points in all) */
+const CREA6=[
+ {id:'scaly',name:'スケーリーフット',from:3,note:'足を鉄のうろこでおおった巻貝。うろこに鉄をふくむ、とてもめずらしい生き物です',pop:'カチン'},
+ {id:'yeti',name:'キワ・ハイルスタ',from:3,note:'毛むくじゃらの腕をもつ、目のないカニのなかま。腕の毛で細菌を育てて食べます',pop:'ふりふり'},
+ {id:'pompeii',name:'ポンペイワーム',from:4,note:'熱水の煙突の管にすむゴカイのなかま。地球でもっとも熱に強い動物のひとつといわれます',pop:'ひゅるっ'},
+ {id:'goemon',name:'ゴエモンコシオリエビ',from:5,note:'沖縄の深海の熱水のまわりに、びっしり群れる白いエビのなかま。胸の毛で細菌を育てます',pop:'もさっ'}
+];
+const ALLC=[].concat(...CREAS,CREA6);
+const VOLC_NEED=4000;
+let volc=false,total=0,volcOpen=false;
+try{total=+localStorage.getItem('awa-total')||0;volcOpen=localStorage.getItem('awa-volc')==='1'}catch(e){}
+if(location.hash==='#kazan'){volcOpen=true;volc=true}   // for trying it out: index.html#kazan
 const SEANAMES=['はじまりの海','こわい顔の海','凍える南極の海','海の底の湖','いちばん深い海溝'];
 function seaN(){return((returns%5)+5)%5}
 function seaB(){return seaN()===1}
-function curCrea(){return CREAS[seaN()]}
+function curCrea(){return volc?CREA6:CREAS[seaN()]}
 let crTap=0;
 function tapOpen(hold){if(crTap<=0)return 0;return Math.min(1,crTap/.18)*(crTap>hold?Math.max(0,1-(crTap-hold)/.35):1)}
 /* creatures met only during the milestone events */
@@ -538,6 +557,70 @@ const DRAW={
     // small dark eye
     cx.fillStyle='#1a0a10';cx.beginPath();cx.arc(S*.42,-S*.12,S*.045,0,TAU);cx.fill();
     cx.fillStyle='rgba(255,255,255,.7)';cx.beginPath();cx.arc(S*.41,-S*.135,S*.014,0,TAU);cx.fill();
+  },
+  /* ---- the undersea volcano ---- */
+  scaly(S,t,h){             // scaly-foot snail: iron-scaled foot, metallic shell
+    const c=crTap>0?Math.max(0,1-crTap/1.8):0,ten=Math.sin(t*3)*S*.04;
+    cx.fillStyle='#3a2a22';cx.beginPath();cx.ellipse(0,S*.22,S*.82,S*.28,0,0,TAU);cx.fill();
+    for(let r=0;r<3;r++)for(let i=0;i<9;i++){const x=-S*.68+i*S*.17+(r%2)*S*.08,y=S*(.1+r*.12);
+      const g=cx.createLinearGradient(x,y-S*.08,x,y+S*.08);g.addColorStop(0,c>0?'#e8ecf2':'#9aa0a8');g.addColorStop(1,'#202124');
+      cx.fillStyle=g;cx.beginPath();cx.ellipse(x,y,S*.1,S*.075,0,0,TAU);cx.fill()}
+    cx.fillStyle='#5a3a2a';cx.beginPath();cx.ellipse(S*.82,S*.12,S*.17,S*.12,0,0,TAU);cx.fill();
+    cx.strokeStyle='#6a4632';cx.lineWidth=S*.05;cx.lineCap='round';cx.beginPath();
+    cx.moveTo(S*.9,S*.04);cx.lineTo(S*1.14,-S*.12+ten);cx.moveTo(S*.84,S*.02);cx.lineTo(S*1.0,-S*.22-ten);cx.stroke();
+    const sg=cx.createRadialGradient(-S*.15,-S*.48,2,0,-S*.25,S*.6);sg.addColorStop(0,'#d8dce2');sg.addColorStop(.35,'#4a4c52');sg.addColorStop(1,'#121214');
+    cx.fillStyle=sg;cx.beginPath();cx.arc(0,-S*.22,S*.5,0,TAU);cx.fill();
+    cx.strokeStyle='rgba(205,210,220,.45)';cx.lineWidth=S*.035;cx.beginPath();
+    for(let a=0;a<12;a+=.2){const r=S*.44*(1-a/12),x=Math.cos(a)*r,y=-S*.22+Math.sin(a)*r;a?cx.lineTo(x,y):cx.moveTo(x,y)}cx.stroke();
+    if(c>0){cx.save();cx.globalCompositeOperation='lighter';cx.fillStyle=`rgba(255,255,240,${c})`;
+      for(let i=0;i<5;i++){const x=-S*.6+i*S*.3,y=S*(.12+(i%2)*.12),r=S*.12*c;cx.beginPath();
+        cx.moveTo(x,y-r);cx.quadraticCurveTo(x,y,x+r,y);cx.quadraticCurveTo(x,y,x,y+r);cx.quadraticCurveTo(x,y,x-r,y);cx.quadraticCurveTo(x,y,x,y-r);cx.fill()}
+      cx.restore()}
+  },
+  yeti(S,t,h){              // yeti crab: blind, with long hairy arms it sways
+    const c=crTap>0&&crTap<1.8?1:0,sw=Math.sin(t*(c?10:2.4))*(c?.45:.15);
+    cx.strokeStyle='#e6dfd2';cx.lineWidth=S*.06;cx.lineCap='round';
+    for(let i=0;i<4;i++){const x=-S*.35+i*S*.2,k=Math.sin(t*4+i)*S*.03;cx.beginPath();cx.moveTo(x,S*.15);cx.lineTo(x-S*.12,S*.38+k);cx.lineTo(x-S*.22,S*.55);cx.stroke()}
+    for(const k of[0,1]){cx.save();cx.translate(S*.4,-S*.02);cx.rotate(-.55+k*.45+sw*(k?1:-1));
+      cx.strokeStyle='#f2ede2';cx.lineWidth=S*.09;cx.beginPath();cx.moveTo(0,0);cx.lineTo(S*.8,0);cx.stroke();
+      cx.strokeStyle='rgba(240,232,212,.85)';cx.lineWidth=1.2;cx.beginPath();
+      for(let i=0;i<15;i++){const x=S*.08+i*S*.05;cx.moveTo(x,0);cx.lineTo(x+Math.sin(t*5+i)*S*.03*(c?2:1),S*(.17+.05*Math.sin(i*1.7)))}
+      cx.stroke();cx.fillStyle='#f8f4ec';cx.beginPath();cx.ellipse(S*.86,0,S*.11,S*.06,0,0,TAU);cx.fill();cx.restore()}
+    const g=cx.createRadialGradient(-S*.1,-S*.15,2,0,0,S*.6);g.addColorStop(0,'#fffdf6');g.addColorStop(1,'#d8cfbc');
+    cx.fillStyle=g;cx.beginPath();cx.ellipse(0,0,S*.52,S*.3,0,0,TAU);cx.fill();
+    cx.strokeStyle='rgba(170,150,120,.5)';cx.lineWidth=1.2;cx.beginPath();cx.moveTo(-S*.1,-S*.28);cx.quadraticCurveTo(-S*.16,0,-S*.1,S*.28);cx.stroke();
+    cx.strokeStyle='#efe8da';cx.lineWidth=1.2;cx.beginPath();cx.moveTo(S*.48,-S*.1);cx.quadraticCurveTo(S*.75,-S*.4,S*.95,-S*.35+Math.sin(t*2)*S*.05);cx.stroke();
+  },
+  pompeii(S,t,h){           // Pompeii worm: pokes its red plume out of a tube on a hot chimney
+    const c=crTap>0?tapOpen(1.2):0,out=1-c;
+    cx.rotate(-.45);
+    const tg=cx.createLinearGradient(0,-S*.18,0,S*.18);tg.addColorStop(0,'#b8b0a4');tg.addColorStop(1,'#5e564c');
+    cx.fillStyle=tg;rr(-S*1.1,-S*.16,S*1.4,S*.32,S*.14);cx.fill();
+    cx.strokeStyle='rgba(60,50,45,.5)';cx.lineWidth=1;
+    for(let i=0;i<6;i++){const x=-S*.95+i*S*.22;cx.beginPath();cx.moveTo(x,-S*.15);cx.lineTo(x+S*.04,S*.15);cx.stroke()}
+    const ex=S*.3+out*S*.35;
+    cx.fillStyle='#ecd0c0';rr(S*.2,-S*.11,ex-S*.15,S*.22,S*.1);cx.fill();
+    cx.strokeStyle='rgba(250,245,235,.85)';cx.lineWidth=1;cx.beginPath();
+    for(let i=0;i<8;i++){const x=S*.25+i*(ex-S*.25)/8;cx.moveTo(x,-S*.1);cx.lineTo(x+Math.sin(t*3+i)*S*.03,-S*.22)}cx.stroke();
+    if(out>.1){cx.strokeStyle='#d8283a';cx.lineWidth=S*.05;cx.lineCap='round';cx.beginPath();
+      for(let k=0;k<7;k++){const a=(k-3)*.22;cx.moveTo(ex,0);
+        cx.quadraticCurveTo(ex+Math.cos(a)*S*.25*out,Math.sin(a)*S*.2,ex+Math.cos(a)*S*.45*out+Math.sin(t*4+k)*S*.03,Math.sin(a)*S*.42*out)}
+      cx.stroke()}
+  },
+  goemon(S,t,h){            // Shinkaia crosnieri: a white squat lobster with a hairy chest
+    const c=crTap>0&&crTap<1.6?1:0,wv=Math.sin(t*(c?14:3));
+    cx.lineCap='round';
+    for(const sd of[-1,1]){cx.strokeStyle='#e9e2d4';cx.lineWidth=S*.09;cx.beginPath();cx.moveTo(S*.3,sd*S*.12);
+      cx.quadraticCurveTo(S*.75,sd*S*.35,S*1.15,sd*S*(.28+wv*.05));cx.stroke();
+      cx.fillStyle='#f4eee2';cx.beginPath();cx.ellipse(S*1.2,sd*S*(.28+wv*.05),S*.16,S*.08,sd*.3,0,TAU);cx.fill()}
+    cx.strokeStyle='rgba(240,236,220,.85)';cx.lineWidth=1.2;cx.beginPath();
+    for(let i=0;i<26;i++){const x=-S*.75+i*S*.06,y=S*.18;cx.moveTo(x,y);cx.lineTo(x+Math.sin(t*4+i+wv)*S*.06*(c?2:1),y+S*.3)}
+    cx.stroke();
+    const g=cx.createLinearGradient(0,-S*.3,0,S*.25);g.addColorStop(0,'#fffaf0');g.addColorStop(1,'#d8cfbc');
+    cx.fillStyle=g;cx.beginPath();cx.ellipse(0,0,S*.75,S*.28,0,0,TAU);cx.fill();
+    cx.strokeStyle='rgba(160,140,110,.5)';cx.lineWidth=1.2;
+    for(let i=0;i<4;i++){const x=-S*.55+i*S*.18;cx.beginPath();cx.moveTo(x,-S*.26);cx.quadraticCurveTo(x-S*.05,0,x,S*.24);cx.stroke()}
+    cx.fillStyle='#2a1a14';cx.beginPath();cx.arc(S*.58,-S*.12,S*.05,0,TAU);cx.fill();
   },
   /* ---- 3rd sea ---- */
   umigumo(S,t,h){           // giant sea spider: a tiny body on eight long jointed legs
@@ -2757,6 +2840,211 @@ EV.finale={len:44,lb:['ひかり','回'],bubbles:false,
 NAMES.finale='光のフィナーレ';
 
 /* =====================================================================
+   海底火山 (secret dungeon). Only for those whose dives add up to 4000.
+   ===================================================================== */
+const SEQV=['magma','vent','scaly','goemon','glow','magma','squid','treasure'];
+if(volc)SEQ=SEQV;
+NAMES.magma='海底噴火';NAMES.scaly='よろいの巻貝';NAMES.goemon='ゴエモンの群れ';
+function evShake(e){return e&&e.shake>0?Math.sin(performance.now()/16)*e.shake*6:0}
+
+/* ---- 海底噴火: the sea floor cracks; catch the flying lava and it cools into black rock ---- */
+let cracks=[],lavas=[],rocks=[],ash=[];
+function volFloor(x){return H*.84-Math.sin(x/W*Math.PI*1.3+.4)*H*.05}
+function sizzle(x,y){noise(.25,'highpass',2200,.12);for(let i=0;i<6;i++)bits.push({x,y,vx:(Math.random()-.5)*60,vy:-30-Math.random()*50,r:1+Math.random()*2,life:.8,col:'#ffb070'})}
+function magmaErupt(c,n){
+  c.glow=1;const y=volFloor(c.x),sc=vScale();
+  for(let i=0;i<n&&lavas.length<40;i++)lavas.push({x:c.x+(Math.random()-.5)*20,y,vx:(Math.random()-.5)*170,vy:-(H*.55+Math.random()*H*.35),r:(8+Math.random()*7)*sc,ph:Math.random()*6});
+  for(let i=0;i<14;i++)plume.push({x:c.x,y,vx:(Math.random()-.5)*60,vy:-(60+Math.random()*90),r:24,life:1.1});
+  if(evt)evt.shake=Math.max(evt.shake||0,.5);rumble();
+}
+EV.magma={len:26,lb:['ようがん','こ'],bubbles:false,
+  start(){
+    cracks=[];lavas=[];rocks=[];ash=[];const n=W<500?4:6;
+    for(let i=0;i<n;i++){const x=W*(i+.5)/n+(Math.random()-.5)*W/n*.3;cracks.push({x,cd:1.2+i*.5+Math.random(),glow:.4,tcd:0,pts:Array.from({length:6},()=>Math.random())})}
+    evt.shake=1.4;rumble();setTimeout(rumble,450);
+    showToast('<b>海底噴火</b>ゴゴゴ…海の底がわれて、赤いようがんがふき出してきました。飛んでくるようがんにふれると、ジュッと冷えて岩になります。われ目にふれると…？',4400);
+  },
+  step(dt){
+    const e=evt,fin=e.t>e.len-3,g=280+H*.35;if(e.shake>0)e.shake-=dt;
+    for(const c of cracks){c.glow=Math.max(.35,c.glow-dt*.8);c.tcd-=dt;c.cd-=dt;
+      if(c.cd<=0&&!fin){c.cd=2.2+Math.random()*2.5;magmaErupt(c,3+Math.floor(Math.random()*3))}}
+    for(let i=lavas.length-1;i>=0;i--){const l=lavas[i];l.vy+=g*dt;l.x+=l.vx*dt;l.y+=l.vy*dt;l.ph+=dt;
+      if(l.vy>0&&l.y>volFloor(l.x)){lavas.splice(i,1);sizzle(l.x,volFloor(l.x))}}
+    for(const r of rocks){if(!r.land){r.vy+=g*dt;r.y+=r.vy*dt;r.x+=r.vx*dt;r.rot+=r.vr*dt;const fy=volFloor(r.x)-r.r*.6;
+        if(r.y>=fy){r.y=fy;r.land=true;knock();sandPuff(r.x,fy+r.r*.5)}}
+      r.heat=Math.max(0,r.heat-dt*.4)}
+    if(rocks.length>50)rocks.splice(0,rocks.length-50);
+    if(Math.random()<dt*14)ash.push({x:Math.random()*W,y:H+5,vy:-(20+Math.random()*30),vx:(Math.random()-.5)*10,r:1+Math.random()*2,life:1});
+    for(let i=ash.length-1;i>=0;i--){const a=ash[i];a.x+=a.vx*dt;a.y+=a.vy*dt;a.life-=dt*.12;if(a.life<=0||a.y<-5)ash.splice(i,1)}
+  },
+  hit(px,py){
+    for(let i=lavas.length-1;i>=0;i--){const l=lavas[i];
+      if((px-l.x)**2+(py-l.y)**2<=(l.r*1.6+18)**2){lavas.splice(i,1);
+        rocks.push({x:l.x,y:l.y,vx:l.vx*.3,vy:Math.min(0,l.vy*.2),r:l.r*1.1,rot:0,vr:(Math.random()-.5)*4,land:false,heat:1});
+        score+=2;evt.n++;$('evn').textContent=evt.n;noise(.3,'highpass',2400,.16);
+        for(let k=0;k<10;k++)bits.push({x:l.x,y:l.y,vx:(Math.random()-.5)*80,vy:-40-Math.random()*60,r:2+Math.random()*3,life:1,col:'rgba(230,230,230,.7)'});
+        pops.push({x:l.x,y:l.y-26,life:.9,txt:'ジュッ +2',col:'#ffc8a0'});update();return true}}
+    for(const c of cracks){const y=volFloor(c.x);
+      if(Math.abs(px-c.x)<55&&py>y-70&&py<y+70){if(c.tcd<=0){c.tcd=1.2;magmaErupt(c,6);pops.push({x:c.x,y:y-40,life:1,txt:'ドドッ',col:'#ffb070'})}return true}}
+    return false;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.2,1.8);if(a<=0)return;
+    cx.save();cx.globalAlpha=a;cx.translate(evShake(e),0);
+    cx.fillStyle='rgba(12,0,0,.38)';cx.fillRect(-10,0,W+20,H);
+    const gg=cx.createLinearGradient(0,H*.45,0,H);gg.addColorStop(0,'rgba(255,90,30,0)');gg.addColorStop(1,'rgba(255,90,30,.28)');
+    cx.fillStyle=gg;cx.fillRect(-10,H*.45,W+20,H*.55);
+    cx.fillStyle='rgba(70,60,60,.6)';
+    for(const s of ash){cx.globalAlpha=a*s.life*.7;cx.beginPath();cx.arc(s.x,s.y,s.r,0,TAU);cx.fill()}
+    cx.globalAlpha=a;
+    const fg=cx.createLinearGradient(0,H*.75,0,H);fg.addColorStop(0,'#2a1614');fg.addColorStop(1,'#0a0404');
+    cx.fillStyle=fg;cx.beginPath();cx.moveTo(-10,H);for(let x=-10;x<=W+10;x+=10)cx.lineTo(x,volFloor(x));cx.lineTo(W+10,H);cx.closePath();cx.fill();
+    for(const c of cracks){const y=volFloor(c.x),gl=c.glow;
+      const hg=cx.createRadialGradient(c.x,y,0,c.x,y,70);hg.addColorStop(0,`rgba(255,140,50,${.45*gl})`);hg.addColorStop(1,'rgba(255,140,50,0)');
+      cx.fillStyle=hg;cx.beginPath();cx.arc(c.x,y,70,0,TAU);cx.fill();
+      cx.save();cx.shadowColor='#ff6a20';cx.shadowBlur=20*gl;cx.strokeStyle=`rgba(255,${Math.round(120+gl*110)},50,${.55+.45*gl})`;
+      cx.lineWidth=3+gl*3;cx.lineJoin='round';cx.lineCap='round';cx.beginPath();cx.moveTo(c.x,y);
+      for(let i=0;i<6;i++)cx.lineTo(c.x+(c.pts[i]-.5)*34,y+8+i*9);cx.stroke();cx.restore()}
+    for(const r of rocks){cx.save();cx.translate(r.x,r.y);cx.rotate(r.rot);
+      const g=cx.createRadialGradient(-r.r*.3,-r.r*.3,1,0,0,r.r*1.2);g.addColorStop(0,'#4e403c');g.addColorStop(1,'#120e0e');
+      cx.fillStyle=g;cx.beginPath();cx.ellipse(0,0,r.r*1.2,r.r*.85,0,0,TAU);cx.fill();
+      if(r.heat>0){cx.strokeStyle=`rgba(255,120,40,${r.heat})`;cx.lineWidth=1.6;cx.beginPath();cx.moveTo(-r.r*.6,0);cx.lineTo(0,r.r*.2);cx.lineTo(r.r*.5,-r.r*.25);cx.stroke()}
+      cx.restore()}
+    cx.save();cx.globalCompositeOperation='lighter';
+    for(const l of lavas){const R=l.r*(2.3+.2*Math.sin(l.ph*9)),g=cx.createRadialGradient(l.x,l.y,0,l.x,l.y,R);
+      g.addColorStop(0,'rgba(255,245,190,.95)');g.addColorStop(.3,'rgba(255,140,40,.85)');g.addColorStop(1,'rgba(255,60,20,0)');
+      cx.fillStyle=g;cx.beginPath();cx.arc(l.x,l.y,R,0,TAU);cx.fill()}
+    cx.restore();cx.restore();
+  },
+  end(){cracks=[];lavas=[];ash=[]},
+  msg(n){return'<b>'+n+' こ</b>のようがんを冷やしました。海の底に、黒い岩がころがっています'}
+};
+
+/* ---- よろいの巻貝: scaly-foot snails crowd a black smoker; shoo the crabs that come to eat them ---- */
+let snails=[],scCrabs=[],smoke=[];
+function chimGeo(){const w=Math.min(W*.46,230);return{x:W/2,w,base:H*.92,top:H*.3}}
+function chimHalf(y){const g=chimGeo(),f=Math.max(0,Math.min(1,(g.base-y)/(g.base-g.top)));return g.w*(.55-.27*f)}
+function snailXY(n){const g=chimGeo();return[g.x+n.off*chimHalf(n.y)*.85,n.y]}
+EV.scaly={len:26,lb:['カチン','回'],bubbles:true,
+  start(){
+    snails=[];scCrabs=[];smoke=[];const g=chimGeo(),n=Math.round(Math.min(40,Math.max(22,W*H/16000)));
+    for(let i=0;i<n;i++)snails.push({y:g.top+40+Math.random()*(g.base-g.top-70),off:Math.random()*2-1,s:(.8+Math.random()*.4)*vScale(),
+      v:(Math.random()<.5?-1:1)*(3+Math.random()*5),shine:0,cd:0,ph:Math.random()*6,hide:0});
+    evt.cT=3.5;const first=meet('scaly');rumble();
+    showToast('<b>よろいの巻貝'+(first?'<br>はじめまして！':'')+'</b>黒い煙をはく煙突に、黒い巻貝がびっしり。足のうろこに鉄をふくむスケーリーフットです。ふれるとカチン。食べにくるカニを追いはらおう',4600);
+  },
+  step(dt){
+    const e=evt,g=chimGeo(),fin=e.t>e.len-3;
+    for(const n of snails){n.ph+=dt;n.cd-=dt;n.shine=Math.max(0,n.shine-dt*1.2);n.hide=Math.max(0,n.hide-dt);
+      if(n.hide<=0)n.y+=n.v*dt;if(n.y<g.top+30||n.y>g.base-30)n.v*=-1}
+    if(Math.random()<dt*10){const r=chimGeo();smoke.push({x:r.x+(Math.random()-.5)*r.w*.15,y:r.top,vx:(Math.random()-.5)*20,vy:-(40+Math.random()*40),r:10+Math.random()*10,life:1})}
+    for(let i=smoke.length-1;i>=0;i--){const m=smoke[i];m.x+=m.vx*dt+Math.sin(m.y*.03)*10*dt;m.y+=m.vy*dt;m.r+=dt*14;m.life-=dt*.35;if(m.life<=0)smoke.splice(i,1)}
+    e.cT-=dt;
+    if(e.cT<=0&&!fin&&scCrabs.length<3&&snails.length){e.cT=3+Math.random()*2.5;const d=Math.random()<.5?1:-1,tg=snails[Math.floor(Math.random()*snails.length)];
+      scCrabs.push({x:d>0?-40:W+40,y:H*(.55+Math.random()*.3),tg,st:'go',vx:0,vy:0,ph:Math.random()*6,s:11*vScale(),mode:'swim',kani:true,cd:0})}
+    for(let i=scCrabs.length-1;i>=0;i--){const c=scCrabs[i];c.ph+=dt;c.cd-=dt;
+      if(c.st==='go'&&!fin){const [tx,ty]=snailXY(c.tg),dx=tx-c.x,dy=ty-c.y,d=Math.hypot(dx,dy)||1;c.vx=dx/d*70;c.vy=dy/d*70;
+        if(d<16*vScale()){c.st='bonk';c.cd=.9;c.tg.hide=1.4;c.tg.shine=1;ping('coin');
+          pops.push({x:tx,y:ty-24,life:1,txt:'カチン！',col:'#e8ecf2'})}}
+      else if(c.st==='bonk'){c.vx*=.9;c.vy*=.9;if(c.cd<=0){c.st='leave';c.vx=(c.x<W/2?-1:1)*120;c.vy=40}}
+      else if(c.st==='go'&&fin){c.st='leave';c.vx=(c.x<W/2?-1:1)*160;c.vy=0}
+      else{c.vy+=60*dt}
+      c.x+=c.vx*dt;c.y+=c.vy*dt;
+      if(c.x<-80||c.x>W+80||c.y>H+60)scCrabs.splice(i,1)}
+  },
+  hit(px,py){
+    for(const c of scCrabs){if(c.st==='leave')continue;
+      if((px-c.x)**2+(py-c.y)**2<=(c.s*2+18)**2){c.st='leave';c.vx=(c.x<W/2?-1:1)*220;c.vy=-80;score+=3;evt.n++;$('evn').textContent=evt.n;
+        pops.push({x:c.x,y:c.y-24,life:1,txt:'あっちいけ +3',col:'#fff2e6'});blip();update();return true}}
+    let hitN=null,bd=1e9;
+    for(const n of snails){const [x,y]=snailXY(n),d=(px-x)**2+(py-y)**2;if(d<bd){bd=d;hitN=n}}
+    if(hitN&&bd<=(14*hitN.s+16)**2){const [x,y]=snailXY(hitN);
+      if(hitN.cd<=0){hitN.cd=.5;hitN.shine=1;hitN.hide=.8;score+=1;evt.n++;$('evn').textContent=evt.n;ping('pearl');
+        pops.push({x,y:y-22,life:.8,txt:'カチン +1',col:'#e8ecf2'});update()}
+      return true}
+    const g=chimGeo();if(Math.abs(px-g.x)<chimHalf(py)&&py>g.top&&py<g.base)return true;
+    return false;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.2,1.6);if(a<=0)return;const g=chimGeo();
+    cx.save();cx.globalAlpha=a;
+    cx.fillStyle='rgba(8,2,2,.45)';cx.fillRect(0,0,W,H);
+    cx.fillStyle='#1a0e0c';cx.beginPath();cx.moveTo(0,H);for(let x=0;x<=W+10;x+=10)cx.lineTo(x,g.base-Math.sin(x/W*Math.PI)*20);cx.lineTo(W,H);cx.closePath();cx.fill();
+    for(const m of smoke){cx.fillStyle=`rgba(18,14,14,${.55*m.life})`;cx.beginPath();cx.arc(m.x,m.y,m.r,0,TAU);cx.fill()}
+    const cg=cx.createLinearGradient(g.x-g.w*.55,0,g.x+g.w*.55,0);cg.addColorStop(0,'#160d0c');cg.addColorStop(.5,'#3a2622');cg.addColorStop(1,'#120a0a');
+    cx.fillStyle=cg;cx.beginPath();
+    for(let k=0;k<=10;k++){const y=g.base-(g.base-g.top)*k/10;cx.lineTo(g.x-chimHalf(y)-Math.sin(k*2.3)*6,y)}
+    for(let k=10;k>=0;k--){const y=g.base-(g.base-g.top)*k/10;cx.lineTo(g.x+chimHalf(y)+Math.sin(k*1.7)*6,y)}
+    cx.closePath();cx.fill();
+    const tg=cx.createRadialGradient(g.x,g.top,0,g.x,g.top,g.w*.6);tg.addColorStop(0,`rgba(255,150,70,${.55+.2*Math.sin(t*4)})`);tg.addColorStop(1,'rgba(255,150,70,0)');
+    cx.fillStyle=tg;cx.beginPath();cx.arc(g.x,g.top,g.w*.6,0,TAU);cx.fill();
+    for(const n of snails){const [x,y]=snailXY(n),S=10*n.s,dn=n.hide>0?.75:1;
+      cx.save();cx.translate(x,y);cx.scale(dn,dn);
+      cx.fillStyle='#2a2224';cx.beginPath();cx.ellipse(0,S*.45,S*1.1,S*.38,0,0,TAU);cx.fill();
+      cx.fillStyle=n.shine>0?`rgb(${150+100*n.shine},${155+100*n.shine},${165+90*n.shine})`:'#6c7078';
+      for(let i=0;i<4;i++){cx.beginPath();cx.ellipse(-S*.75+i*S*.5,S*.45,S*.22,S*.16,0,0,TAU);cx.fill()}
+      const sg=cx.createRadialGradient(-S*.3,-S*.3,1,0,0,S);sg.addColorStop(0,'#b8bcc4');sg.addColorStop(.4,'#3c3e44');sg.addColorStop(1,'#0e0e10');
+      cx.fillStyle=sg;cx.beginPath();cx.arc(0,0,S*.85,0,TAU);cx.fill();
+      cx.strokeStyle='rgba(200,205,215,.4)';cx.lineWidth=1;cx.beginPath();cx.arc(-S*.05,-S*.05,S*.45,0,Math.PI*1.5);cx.stroke();
+      if(n.shine>0){cx.globalCompositeOperation='lighter';cx.fillStyle=`rgba(255,255,240,${n.shine})`;const r=S*1.1*n.shine;
+        cx.beginPath();cx.moveTo(0,-r);cx.quadraticCurveTo(0,0,r,0);cx.quadraticCurveTo(0,0,0,r);cx.quadraticCurveTo(0,0,-r,0);cx.quadraticCurveTo(0,0,0,-r);cx.fill()}
+      cx.restore()}
+    for(const c of scCrabs)drawCrab(c);
+    cx.restore();
+  },
+  end(){snails=[];scCrabs=[];smoke=[]},
+  msg(n){return'<b>カチン '+n+' 回</b>鉄のよろいの巻貝たちは、きょうも熱い煙突でくらしています'}
+};
+
+/* ---- ゴエモンの群れ: countless white squat lobsters crowd the warm rocks and wave their hairy arms ---- */
+let goes=[],shim=[];
+EV.goemon={len:24,lb:['ゴエモン','ひき'],bubbles:true,
+  start(){
+    goes=[];shim=[];const n=Math.round(Math.min(110,Math.max(60,W*H/5000)));
+    for(let i=0;i<n;i++){const f=Math.random();goes.push({x:W*(.04+Math.random()*.92),y:H*(.6+Math.pow(f,.7)*.33),s:(.45+f*.7)*vScale(),ph:Math.random()*6,wave:0,glow:0,dir:Math.random()<.5?-1:1})}
+    goes.sort((a,b)=>a.y-b.y);const first=meet('goemon');shimmer();
+    showToast('<b>ゴエモンの群れ'+(first?'<br>はじめまして！':'')+'</b>熱いお湯がしみ出す岩に、白いゴエモンコシオリエビがぎっしり。胸の毛で細菌を育てています。ふれると、みんなでもさもさ',4400);
+  },
+  step(dt){
+    for(const q of goes){q.ph+=dt;if(q.wave>0)q.wave-=dt;if(q.glow>0)q.glow-=dt*.5}
+    if(Math.random()<dt*8&&evt.t<evt.len-2)shim.push({x:W*(.05+Math.random()*.9),y:H*(.62+Math.random()*.3),vy:-(30+Math.random()*30),r:6+Math.random()*8,life:1});
+    for(let i=shim.length-1;i>=0;i--){const m=shim[i];m.y+=m.vy*dt;m.r+=dt*8;m.life-=dt*.6;if(m.life<=0)shim.splice(i,1)}
+  },
+  hit(px,py){
+    const R=100*vScale();let n=0,near=false;
+    for(const q of goes){const d=Math.hypot(q.x-px,(q.y-py)*1.3);if(d<R){near=true;if(q.wave<=0)n++;q.wave=1.3+d/260;q.glow=1}}
+    if(!near)return false;
+    if(n){const g=Math.max(1,Math.round(n/4));score+=g;evt.n+=n;$('evn').textContent=evt.n;
+      pops.push({x:px,y:py-34,life:.9,txt:'もさもさ +'+g,col:'#fff6e6'});noise(.35,'bandpass',1800,.1);update()}
+    return true;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.2,1.6);if(a<=0)return;
+    cx.save();cx.globalAlpha=a;
+    cx.fillStyle='rgba(10,2,2,.35)';cx.fillRect(0,0,W,H);
+    const top=H*.56,rg=cx.createLinearGradient(0,top,0,H);rg.addColorStop(0,'#3a2420');rg.addColorStop(1,'#120808');
+    cx.fillStyle=rg;cx.beginPath();cx.moveTo(0,H);for(let x=0;x<=W+10;x+=10)cx.lineTo(x,top+Math.sin(x*.01+1)*18+Math.sin(x*.04)*5);cx.lineTo(W,H);cx.closePath();cx.fill();
+    cx.save();cx.globalCompositeOperation='lighter';
+    for(const m of shim){cx.fillStyle=`rgba(255,170,110,${.08*m.life})`;cx.beginPath();cx.arc(m.x,m.y,m.r,0,TAU);cx.fill()}
+    cx.restore();
+    for(const q of goes){const S=12*q.s,w=q.wave>0?Math.sin(q.ph*16)*.5:Math.sin(q.ph*2)*.12;
+      cx.save();cx.translate(q.x,q.y);cx.scale(q.dir,1);
+      if(q.glow>0){cx.save();cx.globalCompositeOperation='lighter';const g=cx.createRadialGradient(0,S*.3,0,0,S*.3,S*2);
+        g.addColorStop(0,`rgba(170,230,255,${.35*q.glow})`);g.addColorStop(1,'rgba(170,230,255,0)');cx.fillStyle=g;cx.beginPath();cx.arc(0,S*.3,S*2,0,TAU);cx.fill();cx.restore()}
+      cx.strokeStyle='#ebe4d6';cx.lineCap='round';cx.lineWidth=S*.16;
+      for(const sd of[-1,1]){const a2=-.6+sd*.25+w*sd;cx.beginPath();cx.moveTo(S*.4,0);cx.lineTo(S*.4+Math.cos(a2)*S*1.1,Math.sin(a2)*S*1.1);cx.stroke()}
+      cx.strokeStyle='rgba(245,240,226,.8)';cx.lineWidth=1;cx.beginPath();
+      for(let i=0;i<7;i++){const x=-S*.6+i*S*.18;cx.moveTo(x,S*.2);cx.lineTo(x+Math.sin(q.ph*3+i)*S*.1,S*.55)}cx.stroke();
+      cx.fillStyle='#f6f0e4';cx.beginPath();cx.ellipse(0,0,S*.75,S*.35,0,0,TAU);cx.fill();
+      cx.fillStyle='#2a1a14';cx.beginPath();cx.arc(S*.5,-S*.1,S*.07,0,TAU);cx.fill();
+      cx.restore()}
+    cx.restore();
+  },
+  end(){goes=[];shim=[]},
+  msg(n){return'<b>'+n+' ひき</b>のゴエモンが、もさもさしました。白い群れは、また静かに細菌を育てています'}
+};
+
+/* =====================================================================
    ゴール: after one full round of events, a deep-sea submersible comes
    down. Tap it to board, rise past the creatures you met, and arrive
    home at the surface. "もう一度もぐる" starts a fresh dive.
@@ -2773,7 +3061,7 @@ function startSub(){
 function setHint(txt){const el=$('hint');if(txt){el.textContent=txt;el.style.opacity=1}else el.style.opacity=0}
 function buildParade(){
   parade=[];let i=0;
-  const fin=seaN()===4,list=(fin?ALLC:curCrea()).filter(c=>met.includes(c.id)),gap=fin?120:170;if(sub)sub.dur=fin?26:14;
+  const fin=!volc&&seaN()===4,list=(fin?ALLC:curCrea()).filter(c=>met.includes(c.id)),gap=fin?120:170;if(sub)sub.dur=fin?26:14;
   for(const c of list){parade.push({id:c.id,name:c.name,x:i%2?W*.78:W*.22,y:-70-i*gap,dir:i%2?-1:1});i++}
   if(met.includes('ebi'))for(let k=0;k<5;k++)parade.push({id:'ebi',x:W*(.15+Math.random()*.7),y:-70-i*170-k*30,ph:Math.random()*6});
 }
@@ -2808,20 +3096,33 @@ function hitSub(px,py){
   pops.push({x:s.x,y:s.y-s.S*.45,life:1,txt:'ガチャン',col:'#ffe6a8'});
 }
 function showEnd(){
-  const fin=seaN()===4;
-  returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
+  const fin=!volc&&seaN()===4;let opened=false;
+  if(!volc){returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
+    total+=score;try{localStorage.setItem('awa-total',total)}catch(e){}
+    if(!volcOpen&&total>=VOLC_NEED){volcOpen=opened=true;try{localStorage.setItem('awa-volc','1')}catch(e){}}}
+  $('endc').classList.toggle('hot',volc||opened);
+  $('eTot').innerHTML=volcOpen?'5つの海の合計 '+total+' 点':'5つの海の合計 '+total+' / '+VOLC_NEED+' 点<i><b id="eTotBar"></b></i>';
+  if(!volcOpen)setTimeout(()=>{const b=$('eTotBar');if(b)b.style.width=Math.min(100,total/VOLC_NEED*100)+'%'},80);
+  $('volcGo').hidden=!volcOpen;$('volcGo').textContent=volc?'もう一度、海底火山へ':'海底火山へもぐる';
+  $('again').textContent=volc?'ふつうの海へもどる':'もう一度もぐる';
   document.querySelector('#endc .t').textContent=fin?'5つの海をめぐりました':'おかえりなさい';document.querySelector('#endc .t').style.fontSize=fin?'22px':'';
   document.querySelector('#endc .s').innerHTML=fin?'はじまりの海から、いちばん深い海溝まで。<br>ぜんぶの海の旅が終わりました':'深海探査機に乗って、<br>海の上まで帰ってきました';
   $('eScore').textContent=score;$('eMet').textContent=met.length+' / '+ZTOTAL;$('eRet').textContent=returns+' 回目';$('eLet').textContent=Math.min(letters,LETTERS.length)+' / '+LETTERS.length;
   $('eNext').textContent=fin?'つぎは、もう一度「はじまりの海」から。なつかしい生き物たちが待っています':'つぎの海は「'+SEANAMES[seaN()]+'」。'+['なつかしい生き物たちが待っています','前とはちがう、こわい顔の生き物たちがいるようです…','冷たい海の、ふしぎな生き物たちがいるようです','海の底に、湖があるといううわさです…','いちばん深い、さいごの海です'][seaN()];
+  if(volc){document.querySelector('#endc .t').textContent='海底火山から帰還';document.querySelector('#endc .t').style.fontSize='24px';
+    document.querySelector('#endc .s').innerHTML='赤く光る海の底から、<br>無事に帰ってきました';
+    $('eNext').textContent='つぎのふつうの海は「'+SEANAMES[seaN()]+'」です'}
+  if(opened){$('eNext').innerHTML='<b style="color:#ffb27a">海の底が、赤く光っています…</b><br>5つの海の合計が '+VOLC_NEED+' 点をこえて、海底火山への道がひらきました！';
+    rumble();setTimeout(rumble,500)}
   $('endc').classList.add('show');happy();
 }
 function restart(){
   $('endc').classList.remove('show');
   evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;bottle=null;
-  SEQ=SEQS[seaN()];score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];
+  SEQ=volc?SEQV:SEQS[seaN()];score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];rocks=[];
   for(let i=0;i<7;i++){spawn();const b=bubbles[bubbles.length-1];b.y=H*(.3+Math.random()*.7);b.born=1}
   $('ev').hidden=true;setHint('');update();
+  if(volc){showToast('<b>海底火山へ</b>5つの海をめぐった人だけが来られる、赤く光る海の底。熱水と、ようがんと、ふしぎな生き物たちの世界へ',4200);rumble();return}
   showToast('<b>'+SEANAMES[seaN()]+'へ</b>'+['なつかしい生き物たちの海に、もう一度もぐっていこう','なんだか前とはちがう気配…。こわい顔の魚や、ふしぎな生き物がいるようです','浅い砂地から、凍えるように冷たい南極の深海へ','この海の底には、ふしぎな湖があるそうです','5つめの、さいごの海。世界でいちばん深い海溝へ'][seaN()],3800);
 }
 function drawParade(t){
@@ -2904,7 +3205,8 @@ function sonar(){
 }
 function splash(){noise(1.2,'highpass',900,.25);shimmer()}
 
-$('again').onclick=e=>{e.stopPropagation();restart()};
+$('again').onclick=e=>{e.stopPropagation();volc=false;restart()};
+$('volcGo').onclick=e=>{e.stopPropagation();volc=true;restart()};
 
 /* ---- reset the saved records (best score only, or everything) ---- */
 let rKind=null,rWasPaused=false;
@@ -2912,12 +3214,12 @@ function rOpen(){rWasPaused=paused;paused=true;rKind=null;$('rChoose').hidden=fa
   $('rMsg').innerHTML='どれを消しますか？<br>最高記録 '+best+' ・ 図鑑 '+met.length+' / '+ZTOTAL+' ・ 帰還 '+returns+' 回 ・ 手紙 '+Math.min(letters,LETTERS.length)+' / '+LETTERS.length;$('resetc').classList.add('show')}
 function rClose(){$('resetc').classList.remove('show');paused=rWasPaused;if(!paused)t0=performance.now()}
 function rAsk(kind){rKind=kind;$('rChoose').hidden=true;$('rConfirm').hidden=false;
-  $('rMsg').innerHTML=kind==='best'?'最高記録を 0 にもどします。<br>図鑑や宝はそのままです':'最高記録・図鑑・集めた宝・帰還回数・手紙を<br>ぜんぶ消して、1 回目の海からやり直します。<br>もとにはもどせません'}
+  $('rMsg').innerHTML=kind==='best'?'最高記録を 0 にもどします。<br>図鑑や宝はそのままです':'最高記録・図鑑・集めた宝・帰還回数・手紙・合計点を<br>ぜんぶ消して、1 回目の海からやり直します。<br>もとにはもどせません'}
 function rDo(){
-  const keys=rKind==='best'?['awa-best']:['awa-best','awa-met','awa-takara','awa-return','awa-letters'];
+  const keys=rKind==='best'?['awa-best']:['awa-best','awa-met','awa-takara','awa-return','awa-letters','awa-total','awa-volc'];
   for(const k of keys){try{localStorage.removeItem(k)}catch(e){}}
   best=0;
-  if(rKind==='all'){met=[];takara=0;returns=0;letters=0;bottle=null;showMet();$('resetc').classList.remove('show');paused=false;$('pause').textContent='ひと休み';
+  if(rKind==='all'){met=[];takara=0;returns=0;letters=0;bottle=null;total=0;volcOpen=false;volc=false;showMet();$('resetc').classList.remove('show');paused=false;$('pause').textContent='ひと休み';
     restart();showToast('<b>リセットしました</b>まっさらな気持ちで、1 回目の海へ',3000);return}
   update();rClose();showToast('<b>最高記録をリセットしました</b>',2200);
 }
@@ -3120,6 +3422,7 @@ function burst(b){
 }
 
 function showSeas(){
+  if(volc){document.querySelectorAll('#seas i').forEach(d=>d.className='done');$('seaName').textContent='🌋 海底火山';$('seas').setAttribute('aria-label','海底火山');return}
   const n=seaN(),lap=Math.floor(returns/5)+1;
   document.querySelectorAll('#seas i').forEach((d,i)=>d.className=i<n?'done':i===n?'now':'');
   $('seaName').textContent=(lap>1?lap+'周目・':'')+SEANAMES[n];
@@ -3157,6 +3460,13 @@ function water(){
   g.addColorStop(.55,`hsl(${200-k*10} ${70-k*25}% ${18-k*11}%)`);
   g.addColorStop(1,`hsl(${210} ${70-k*30}% ${8-k*4}%)`);
   cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  if(volc){   // the volcano sea: red-dark water, glowing from below
+    const v=cx.createLinearGradient(0,0,0,H);v.addColorStop(0,'rgba(70,20,10,.55)');v.addColorStop(1,'rgba(120,30,0,.6)');
+    cx.fillStyle=v;cx.fillRect(0,0,W,H);
+    const tt=performance.now()/1000,b=cx.createRadialGradient(W*.5,H*1.1,0,W*.5,H*1.1,Math.max(W,H)*.8);
+    b.addColorStop(0,`rgba(255,110,40,${.3+.06*Math.sin(tt*1.3)})`);b.addColorStop(1,'rgba(255,110,40,0)');
+    cx.fillStyle=b;cx.fillRect(0,0,W,H);
+  }
   // light rays from the surface
   const t=performance.now()/1000;
   cx.save();cx.globalCompositeOperation='lighter';
@@ -3238,7 +3548,8 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 update();
-if(seaN()>0)setTimeout(()=>{if(!evt&&!paused)showToast('<b>'+SEANAMES[seaN()]+'</b>'+(seaN()+1)+' つめの海。深くもぐると、ここだけの生き物たちに会えます',3200)},1200);
+if(volc)setTimeout(()=>showToast('<b>海底火山へ</b>赤く光る海の底。熱水と、ようがんと、ふしぎな生き物たちの世界へ',4000),800);
+else if(seaN()>0)setTimeout(()=>{if(!evt&&!paused)showToast('<b>'+SEANAMES[seaN()]+'</b>'+(seaN()+1)+' つめの海。深くもぐると、ここだけの生き物たちに会えます',3200)},1200);
 requestAnimationFrame(frame);
 })();
 </script>
