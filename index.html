@@ -86,6 +86,10 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 .seas.can #seaName::after{content:" ▾";font-size:10px;color:var(--glow)}
 #seac .go.volc{display:block;margin:10px auto 0}
 #seac .no{display:block;margin:12px auto 0}
+#seac .go.quiet,#seac #seacBack{display:block;width:100%;margin:12px auto 0;line-height:1.4;background:rgba(150,120,255,.16);border-color:rgba(190,170,255,.5)}
+#seac .go.quiet small{display:block;font-size:10px;color:var(--soft);letter-spacing:.04em}
+#seac .go[hidden]{display:none}
+#seac .pick[hidden]{display:none}
 .endc .t{display:block;font-size:28px;font-weight:700;color:var(--ink)}
 .endc .s{margin:6px 0 16px;font-size:14px;line-height:1.7;color:var(--soft)}
 .endc dl{display:grid;grid-template-columns:auto auto;gap:6px 14px;margin:0 auto 18px;width:max-content;text-align:left;font-size:14px}
@@ -152,9 +156,19 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 <div class="endc" id="seac" role="dialog" aria-label="海をえらぶ">
   <b class="t" style="font-size:22px">海をえらぶ</b>
   <p class="s" id="seacMsg"></p>
-  <div class="pick"><div class="grid" id="seacGrid"></div></div>
+  <div class="pick" id="seacPick"><div class="grid" id="seacGrid"></div></div>
   <button class="btn go volc" id="seacVolc" type="button" hidden>🌋 海底火山へ</button>
+  <button class="btn go quiet" id="seacQuiet" type="button">🌙 しずかな夜光の海<small>生き物もできごともない、ひと休みの海</small></button>
+  <button class="btn go" id="seacBack" type="button" hidden>もとの海へもどる</button>
   <button class="btn no" id="seacNo" type="button">やめる</button>
+</div>
+<div class="endc" id="resumec" role="dialog" aria-label="つづきからもぐる">
+  <b class="t" style="font-size:22px">つづきからもぐる？</b>
+  <p class="s" id="resMsg"></p>
+  <div class="rbtns">
+    <button class="btn go" id="resGo" type="button">つづきから</button>
+    <button class="btn" id="resNew" type="button">はじめから</button>
+  </div>
 </div>
 <div class="endc" id="resetc" role="dialog" aria-label="きろくのリセット">
   <b class="t" style="font-size:22px">きろくのリセット</b>
@@ -186,7 +200,7 @@ const PER=25;
 let score=0,best=0,paused=false,soundOn=false,actx=null;
 try{best=+localStorage.getItem('awa-best')||0}catch(e){}
 $('best').textContent='きろく '+best;
-function level(){return Math.floor(score/PER)}
+function level(){return quiet?2:Math.floor(score/PER)}
 function cfg(){
   const L=level();
   return{
@@ -253,7 +267,8 @@ try{total=+localStorage.getItem('awa-total')||0}catch(e){}
 function volcReady(){return returns>=5&&total>=VOLC_NEED}   // both: 5 seas visited AND 4000 points in all
 let kazanTest=location.hash==='#kazan';
 const PREVIEW={'#hone':['bone',1],'#hikari':['finale',4],'#mori':['tubef',3],'#harp':['harp',4],'#ice':['ice',3]}[location.hash];
-const erabuTest=location.hash==='#erabu';   // try the sea picker right away: index.html#erabu (nothing is saved)
+const erabuTest=location.hash==='#erabu';
+const quietTest=location.hash==='#shizuka';   // try the sea picker right away: index.html#erabu (nothing is saved)
 const finTest=!!PREVIEW||erabuTest;   // try the finale right away: index.html#hikari (nothing is saved)
 if(kazanTest){volc=true}   // for trying it out: index.html#kazan
 const SEANAMES=['はじまりの海','こわい顔の海','凍える南極の海','海の底の湖','いちばん深い海溝'];
@@ -274,6 +289,7 @@ let cr=null,crT=5,pops=[],returns=0,finE=null;
 try{returns=+localStorage.getItem('awa-return')||0}catch(e){}
 if(PREVIEW)returns=PREVIEW[1];else if(erabuTest)returns=4;
 let evt=null,pendingEvt=null,seqI=0,nextAt=50;
+let quiet=false,qT=18;   // しずかな夜光の海: no creatures or events; plain bubbles and glowing bubbles take turns
 function showMet(){$('zukan').textContent='であった生き物 '+met.length+' / '+ZTOTAL}
 showMet();
 function meet(id){
@@ -323,6 +339,7 @@ function hitCreature(px,py){
   return true;
 }
 function stepCreature(dt){
+  if(quiet){cr=null;return}
   const L=level();
   if(!cr){
     if(L>=3&&dt>0&&!evt){crT-=dt;if(crT<=0){spawnCreature();crT=Math.max(9,22-(L-3)*3)+Math.random()*12}}
@@ -1031,6 +1048,7 @@ function endEvent(){
   happy();update();
 }
 function stepEvent(dt){
+  if(quiet&&!evt){qT-=dt;if(qT<=0){qT=22+Math.random()*8;startEvent('glow');evt.len=34}}
   if(pendingEvt&&!evt){pendingEvt.wait-=dt;if(pendingEvt.wait<=0){const k=pendingEvt.kind;pendingEvt=null;if(k==='sub')startSub();else startEvent(k)}}
   if(!evt)return;
   evt.t+=dt;
@@ -3543,6 +3561,7 @@ function hitSub(px,py){
   return true;
 }
 function showEnd(){
+  clearDive();
   const fin=!volc&&seaN()===4;let opened=false;
   pickSea=null;if(!finTest)try{localStorage.removeItem('awa-pick')}catch(e){}
   if(!volc&&finTest){returns++}
@@ -3584,28 +3603,41 @@ function buildPick(fin){
 /* the sea picker can also be opened mid-dive by tapping the sea name (once all five seas are done) */
 let sWasPaused=false;
 function seacOpen(){
-  if(!canPick()||(evt&&evt.kind==='sub')||['endc','letterc','resetc','seac'].some(id=>$(id).classList.contains('show')))return;
+  if((finTest&&!erabuTest)||(evt&&evt.kind==='sub')||['endc','letterc','resetc','seac','resumec'].some(id=>$(id).classList.contains('show')))return;
   sWasPaused=paused;paused=true;
-  $('seacMsg').innerHTML='いまの海をやめて、えらんだ海の水面からもぐりなおします。<br><small>この旅の '+score+' 点は、合計点には入りません</small>';
+  $('seacPick').hidden=!canPick();$('seacQuiet').hidden=quiet;$('seacBack').hidden=!quiet;
+  $('seacMsg').innerHTML=quiet?'しずかな夜光の海にいます。もとの海へもどると、さっきのつづきからもぐれます'+(canPick()?'。ほかの海をえらぶこともできます':'')
+    :canPick()?'いまの海をやめて、えらんだ海の水面からもぐりなおします。<br><small>この旅の '+score+' 点は、合計点には入りません</small>'
+    :'5つの海をめぐると、ここで行きたい海をえらべるようになります。<br><small>しずかな夜光の海へ行っても、いまの海のつづきは残ります</small>';
   const g=$('seacGrid');g.innerHTML='';
   SEANAMES.forEach((nm,i)=>{const b=document.createElement('button');b.type='button';b.className='btn sea';
-    const cur=!volc&&i===seaN();b.disabled=cur;
+    const cur=!volc&&!quiet&&i===seaN();b.disabled=cur;
     b.innerHTML=(i+1)+'. '+nm+'<small>'+(cur?'いまの海':SEADESC[i])+'</small>';
-    b.onclick=e=>{e.stopPropagation();volc=false;pickSea=i;if(!finTest)try{localStorage.setItem('awa-pick',i)}catch(_){}seacClose(true);restart()};
+    b.onclick=e=>{e.stopPropagation();volc=false;quiet=false;clearDive();pickSea=i;if(!finTest)try{localStorage.setItem('awa-pick',i)}catch(_){}seacClose(true);restart()};
     g.appendChild(b)});
-  $('seacVolc').hidden=!volcOpen||volc;
+  $('seacVolc').hidden=!volcOpen||volc||!canPick();
   $('seac').classList.add('show');$('seac').scrollTop=0;
 }
 function seacClose(go){$('seac').classList.remove('show');paused=go?false:sWasPaused;$('pause').textContent=paused?'つづける':'ひと休み';if(!paused)t0=performance.now();if(go)showToast('',0)}
 $('seas').onclick=e=>{e.stopPropagation();seacOpen()};
 $('seacNo').onclick=e=>{e.stopPropagation();seacClose(false)};
-$('seacVolc').onclick=e=>{e.stopPropagation();volc=true;seacClose(true);restart()};
-function restart(){
+$('seacVolc').onclick=e=>{e.stopPropagation();volc=true;quiet=false;clearDive();seacClose(true);restart()};
+$('seacQuiet').onclick=e=>{e.stopPropagation();saveDive();seacClose(true);goQuiet()};
+$('seacBack').onclick=e=>{e.stopPropagation();seacClose(true);quiet=false;restart();const d=readDive();if(d)resumeDive(d)};
+function goQuiet(){
+  if(evt&&EV[evt.kind]&&EV[evt.kind].end)EV[evt.kind].end();
+  evt=null;whale=null;squid=null;chest=null;deme=null;lilies=[];swimmers=[];blob=null;hoyas=[];hfood=[];bone=null;worms=[];hags=[];
+  quiet=true;qT=16;restart(true);
+  showToast('<b>しずかな夜光の海</b>生き物も、できごともない、ひと休みの海。ときどき夜光虫が光りはじめます。ここでの点数は、記録には入りません',4600);
+}
+function restart(keepQuiet){
+  if(!keepQuiet)quiet=false;
   $('endc').classList.remove('show');
   evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;bottle=null;finE=null;
   SEQ=volc?SEQV:SEQS[seaN()];score=0;lastLevel=0;seqI=0;nextAt=MS;bubbles=[];bits=[];pops=[];rocks=[];
   for(let i=0;i<7;i++){spawn();const b=bubbles[bubbles.length-1];b.y=H*(.3+Math.random()*.7);b.born=1}
   $('ev').hidden=true;setHint('');update();
+  if(quiet)return;
   if(volc){showToast('<b>海底火山へ</b>5つの海をめぐった人だけが来られる、赤く光る海の底。熱水と、ようがんと、ふしぎな生き物たちの世界へ',4200);rumble();return}
   showToast('<b>'+SEANAMES[seaN()]+'へ</b>'+['なつかしい生き物たちの海に、もう一度もぐっていこう','なんだか前とはちがう気配…。こわい顔の魚や、ふしぎな生き物がいるようです','浅い砂地から、凍えるように冷たい南極の深海へ','この海の底には、ふしぎな湖があるそうです','5つめの、さいごの海。世界でいちばん深い海溝へ'][seaN()],3800);
 }
@@ -3769,6 +3801,7 @@ function spawnBottle(){
   if(!evt)showToast('<b>あれ？</b>なにかが、上から沈んできます',2400);
 }
 function stepBottle(dt){
+  if(quiet&&!bottle)return;
   if(!bottle){
     const busy=evt||pendingEvt||level()<1||$('endc').classList.contains('show')||$('letterc').classList.contains('show');
     if(!busy){bottleCd-=dt;if(bottleCd<=0)spawnBottle()}
@@ -3856,6 +3889,41 @@ function drawBottle(t){
       cx.quadraticCurveTo(sx,sy,sx-r,sy);cx.quadraticCurveTo(sx,sy,sx,sy-r);cx.fill();cx.restore()}}
 }
 
+/* ---- つづきから: the dive in progress is saved, so closing the page doesn't lose it ---- */
+function clearDive(){try{localStorage.removeItem('awa-dive')}catch(e){}}
+function saveDive(){
+  if(finTest||kazanTest||quiet||pendingDive)return;
+  if(score<=0||$('endc').classList.contains('show')||(evt&&evt.kind==='sub'&&sub&&sub.phase!=='down')){clearDive();return}
+  const mid=!!(evt||pendingEvt);   // an event in progress is played again from its start
+  const d={v:1,sea:seaN(),volc,pick:pickSea,ret:returns,score,seqI:mid?Math.max(0,seqI-1):seqI,nextAt:mid?score:nextAt,at:Date.now()};
+  try{localStorage.setItem('awa-dive',JSON.stringify(d))}catch(e){}
+}
+function readDive(){
+  let d=null;try{d=JSON.parse(localStorage.getItem('awa-dive')||'null')}catch(e){}
+  if(!d||d.v!==1||!(d.score>0)||d.ret!==returns||d.pick!==pickSea)return null;
+  if(d.volc?!volcReady():d.sea!==seaN())return null;
+  return d;
+}
+function resumeDive(d){
+  volc=!!d.volc;quiet=false;SEQ=volc?SEQV:SEQS[seaN()];
+  score=d.score;seqI=Math.min(d.seqI,SEQ.length);nextAt=d.nextAt;lastLevel=level();
+  hintGone=true;$('hint').style.opacity=0;update();
+  showToast('<b>つづきから</b>'+(volc?'海底火山':SEANAMES[seaN()])+'の、水深 '+(2+level()*8)+' m から、またもぐります',3200);
+}
+let pendingDive=null;
+function askResume(d){
+  pendingDive=d;paused=true;$('pause').textContent='つづける';
+  const mins=Math.round((Date.now()-d.at)/60000),ago=mins<2?'さっき':mins<60?mins+' 分前':mins<1440?Math.round(mins/60)+' 時間前':Math.round(mins/1440)+' 日前';
+  $('resMsg').innerHTML=ago+'、「'+(d.volc?'海底火山':SEANAMES[d.sea])+'」の<br><b style="color:var(--ink)">'+d.score+' 点（水深 '+(2+Math.floor(d.score/PER)*8)+' m）</b>までもぐっていました';
+  $('resumec').classList.add('show');
+}
+function closeResume(){$('resumec').classList.remove('show');paused=false;$('pause').textContent='ひと休み';t0=performance.now()}
+$('resGo').onclick=e=>{e.stopPropagation();closeResume();if(pendingDive)resumeDive(pendingDive);pendingDive=null};
+$('resNew').onclick=e=>{e.stopPropagation();closeResume();clearDive();pendingDive=null};
+let saveT=3;
+addEventListener('pagehide',saveDive);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveDive()});
+
 /* ---- tapping ---- */
 let lastLevel=0,hintGone=false;
 function hit(px,py){
@@ -3906,8 +3974,9 @@ function burst(b){
 }
 
 function showSeas(){
+  if(quiet){$('seas').classList.add('can');document.querySelectorAll('#seas i').forEach(d=>d.className='');$('seaName').textContent='🌙 しずかな夜光の海';$('seas').setAttribute('aria-label','しずかな夜光の海');return}
   if(volc){$('seas').classList.toggle('can',canPick());document.querySelectorAll('#seas i').forEach(d=>d.className='done');$('seaName').textContent='🌋 海底火山';$('seas').setAttribute('aria-label','海底火山');return}
-  $('seas').classList.toggle('can',canPick()&&!(finTest&&!erabuTest));
+  $('seas').classList.toggle('can',!(finTest&&!erabuTest));
   const n=seaN(),lap=Math.floor(returns/5)+1;
   document.querySelectorAll('#seas i').forEach((d,i)=>d.className=i===n?'now':(i<n||canPick())?'done':'');
   $('seaName').textContent=(lap>1?lap+'周目・':'')+SEANAMES[n];
@@ -3919,14 +3988,14 @@ function update(){
   const L=level();
   $('depth').textContent=2+L*8;
   $('bar').style.width=((score%PER)/PER*100)+'%';
-  if(score>best&&!finTest){best=score;try{localStorage.setItem('awa-best',best)}catch(e){}}
+  if(score>best&&!finTest&&!quiet){best=score;try{localStorage.setItem('awa-best',best)}catch(e){}}
   $('best').textContent='きろく '+best;
   let leveled=false;
   if(L>lastLevel){lastLevel=L;leveled=true;
     if(!evt)showToast('<b>水深 '+(2+L*8)+' m</b>'+(depthNames[Math.min(L,depthNames.length-1)])+'へ。泡が少し速くなります',2600)}
-  if(!evt&&!pendingEvt&&score>=nextAt){pendingEvt={kind:seqI>=SEQ.length?'sub':SEQ[seqI],wait:leveled?2.6:.4};seqI++}
+  if(!quiet&&!evt&&!pendingEvt&&score>=nextAt){pendingEvt={kind:seqI>=SEQ.length?'sub':SEQ[seqI],wait:leveled?2.6:.4};seqI++}
   const nxName=seqI>=SEQ.length?'深海探査機':NAMES[SEQ[seqI]];
-  $('nx').textContent=evt||pendingEvt?'できごとの最中':nxName+'まで あと '+Math.max(0,nextAt-score);
+  $('nx').textContent=quiet?(evt?'夜光虫が光っています':'ゆっくり、ひと休み'):evt||pendingEvt?'できごとの最中':nxName+'まで あと '+Math.max(0,nextAt-score);
 }
 let toastTimer;
 function showToast(html,ms){
@@ -3974,7 +4043,9 @@ function drawBubble(b){
     g.addColorStop(0,'rgba(255,248,220,.85)');g.addColorStop(.6,'rgba(255,214,140,.28)');g.addColorStop(1,'rgba(255,230,168,.55)');
   }else if(b.glow){
     g.addColorStop(0,`hsla(${b.hue},100%,90%,.35)`);g.addColorStop(.7,`hsla(${b.hue},100%,70%,.15)`);g.addColorStop(1,`hsla(${b.hue},100%,75%,.7)`);
-    cx.shadowColor=`hsl(${b.hue},100%,70%)`;cx.shadowBlur=18;
+    // soft halo drawn as a gradient ring (much lighter than shadowBlur on phones)
+    const hg=cx.createRadialGradient(b.x,b.y,r*.85,b.x,b.y,r*1.5);hg.addColorStop(0,`hsla(${b.hue},100%,70%,.45)`);hg.addColorStop(1,`hsla(${b.hue},100%,70%,0)`);
+    cx.fillStyle=hg;cx.beginPath();cx.arc(b.x,b.y,r*1.5,0,6.28);cx.fill();
   }else{
     g.addColorStop(0,'rgba(255,255,255,.06)');g.addColorStop(.75,`hsla(${b.hue},80%,80%,.08)`);g.addColorStop(1,`hsla(${b.hue},90%,88%,.42)`);
   }
@@ -3994,6 +4065,7 @@ function frame(now){
   if(paused)dt=0;
   if(reduce)dt*=.6;
   const c=cfg(),t=now/1000;
+  saveT-=dt;if(saveT<=0){saveT=3;saveDive()}
   stepEvent(dt);if(finE&&!(evt&&evt.kind==='finale'))finStep(dt);
   spawnT-=dt;
   if(spawnT<=0&&!paused&&(!evt||evt.kind==='glow'||evt.kind==='squid'||evt.kind==='deme'||evt.kind==='lily'||evt.kind==='blob'||evt.kind==='hoya'||evt.kind==='bone'||(EV[evt.kind]&&EV[evt.kind].bubbles)||(finE&&evt.kind==='sub'&&sub&&(sub.phase==='down'||sub.phase==='wait')))){spawn();spawnT=c.spawn*(!evt?1:evt.kind==='glow'?.45:1.4)*(.6+Math.random()*.8)}
@@ -4035,8 +4107,10 @@ function frame(now){
 update();
 if(erabuTest){score=320;nextAt=1e9;hintGone=true;$('hint').style.opacity=0;update();setTimeout(showEnd,600)}
 else if(finTest){score=500;lastLevel=level();seqI=SEQ.indexOf(PREVIEW[0])+1;update();hintGone=true;$('hint').style.opacity=0;setTimeout(()=>startEvent(PREVIEW[0]),700)}
+else if(!quietTest&&readDive())askResume(readDive());
 else if(volc)setTimeout(()=>showToast('<b>海底火山へ</b>赤く光る海の底。熱水と、ようがんと、ふしぎな生き物たちの世界へ',4000),800);
 else if(seaN()>0)setTimeout(()=>{if(!evt&&!paused)showToast('<b>'+SEANAMES[seaN()]+'</b>'+(seaN()+1)+' つめの海。深くもぐると、ここだけの生き物たちに会えます',3200)},1200);
+if(quietTest)setTimeout(goQuiet,300);
 requestAnimationFrame(frame);
 })();
 </script>
