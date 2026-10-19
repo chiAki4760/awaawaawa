@@ -224,7 +224,8 @@ const VOLC_NEED=4000;
 let volc=false,total=0,volcOpen=false;
 try{total=+localStorage.getItem('awa-total')||0}catch(e){}
 function volcReady(){return returns>=5&&total>=VOLC_NEED}   // both: 5 seas visited AND 4000 points in all
-let kazanTest=location.hash==='#kazan';if(kazanTest){volc=true}   // for trying it out: index.html#kazan
+let kazanTest=location.hash==='#kazan';
+const finTest=location.hash==='#hikari';   // try the finale right away: index.html#hikari (nothing is saved)if(kazanTest){volc=true}   // for trying it out: index.html#kazan
 const SEANAMES=['はじまりの海','こわい顔の海','凍える南極の海','海の底の湖','いちばん深い海溝'];
 function seaN(){return((returns%5)+5)%5}
 function seaB(){return seaN()===1}
@@ -237,12 +238,13 @@ const ZTOTAL=ALLC.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
 let cr=null,crT=5,pops=[],returns=0,finE=null;
 try{returns=+localStorage.getItem('awa-return')||0}catch(e){}
+if(finTest)returns=4;
 let evt=null,pendingEvt=null,seqI=0,nextAt=50;
 function showMet(){$('zukan').textContent='であった生き物 '+met.length+' / '+ZTOTAL}
 showMet();
 function meet(id){
   if(met.includes(id))return false;
-  met.push(id);try{localStorage.setItem('awa-met',JSON.stringify(met))}catch(e){}
+  met.push(id);if(!finTest)try{localStorage.setItem('awa-met',JSON.stringify(met))}catch(e){}
   showMet();return true;
 }
 function crSize(){return Math.max(46,Math.min(72,Math.min(W,H)*.125))}
@@ -3112,7 +3114,8 @@ function hitSub(px,py){
 }
 function showEnd(){
   const fin=!volc&&seaN()===4;let opened=false;
-  if(!volc){returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
+  if(!volc&&finTest){returns++}
+  else if(!volc){returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
     total+=score;try{localStorage.setItem('awa-total',total)}catch(e){}
     if(!volcOpen&&volcReady()){volcOpen=opened=true}}
   $('endc').classList.toggle('hot',volc||opened);
@@ -3450,7 +3453,7 @@ function update(){
   const L=level();
   $('depth').textContent=2+L*8;
   $('bar').style.width=((score%PER)/PER*100)+'%';
-  if(score>best){best=score;try{localStorage.setItem('awa-best',best)}catch(e){}}
+  if(score>best&&!finTest){best=score;try{localStorage.setItem('awa-best',best)}catch(e){}}
   $('best').textContent='きろく '+best;
   let leveled=false;
   if(L>lastLevel){lastLevel=L;leveled=true;
@@ -3564,7 +3567,8 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 update();
-if(volc)setTimeout(()=>showToast('<b>海底火山へ</b>赤く光る海の底。熱水と、ようがんと、ふしぎな生き物たちの世界へ',4000),800);
+if(finTest){score=500;lastLevel=level();seqI=SEQ.length;update();hintGone=true;$('hint').style.opacity=0;setTimeout(()=>startEvent('finale'),700)}
+else if(volc)setTimeout(()=>showToast('<b>海底火山へ</b>赤く光る海の底。熱水と、ようがんと、ふしぎな生き物たちの世界へ',4000),800);
 else if(seaN()>0)setTimeout(()=>{if(!evt&&!paused)showToast('<b>'+SEANAMES[seaN()]+'</b>'+(seaN()+1)+' つめの海。深くもぐると、ここだけの生き物たちに会えます',3200)},1200);
 requestAnimationFrame(frame);
 })();
