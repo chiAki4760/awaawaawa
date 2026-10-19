@@ -2757,8 +2757,14 @@ EV.ice={len:26,lb:['アイスワーム','ひき'],bubbles:true,
       cx.stroke();
       for(const [px,py,f] of pts){const r=3.1*w.s*(1-f*.25);cx.fillStyle=f>.95?'#ff8aa0':'#ffa6b6';cx.beginPath();cx.arc(px,py,r,0,TAU);cx.fill();
         cx.strokeStyle='rgba(200,80,100,.45)';cx.lineWidth=.8;cx.stroke()}
-      const [hx,hy,,ha]=pts[N];cx.fillStyle='#3a1418';
-      cx.beginPath();cx.arc(hx+Math.cos(ha-.6)*2*w.s,hy+Math.sin(ha-.6)*2*w.s,.8*w.s,0,TAU);cx.arc(hx+Math.cos(ha+.6)*2*w.s,hy+Math.sin(ha+.6)*2*w.s,.8*w.s,0,TAU);cx.fill()}
+      // round eyes with a shine (a little experiment in cuteness)
+      const [hx,hy,,ha]=pts[N],c=Math.cos(ha),sn=Math.sin(ha),S=w.s,blink=Math.sin(t*.7+w.ph*3)>.97;
+      cx.fillStyle='#ff9aae';cx.beginPath();cx.arc(hx,hy,3.6*S,0,TAU);cx.fill();
+      for(const sd of[-1,1]){const ex=hx+c*1*S-sn*sd*1.9*S,ey=hy+sn*1*S+c*sd*1.9*S;
+        if(blink){cx.strokeStyle='#3a1418';cx.lineWidth=.9*S;cx.beginPath();cx.moveTo(ex-1.5*S,ey);cx.lineTo(ex+1.5*S,ey);cx.stroke();continue}
+        cx.fillStyle='#fff';cx.beginPath();cx.arc(ex,ey,2*S,0,TAU);cx.fill();
+        cx.fillStyle='#2a1014';cx.beginPath();cx.arc(ex+c*.5*S,ey+sn*.5*S,1.25*S,0,TAU);cx.fill();
+        cx.fillStyle='#fff';cx.beginPath();cx.arc(ex+c*.5*S-.45*S,ey+sn*.5*S-.5*S,.45*S,0,TAU);cx.fill()}}
     cx.restore();
   },
   end(){iceW=[];iceLumps=[];iceMats=[]},
