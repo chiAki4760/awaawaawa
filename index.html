@@ -225,7 +225,7 @@ let volc=false,total=0,volcOpen=false;
 try{total=+localStorage.getItem('awa-total')||0}catch(e){}
 function volcReady(){return returns>=5&&total>=VOLC_NEED}   // both: 5 seas visited AND 4000 points in all
 let kazanTest=location.hash==='#kazan';
-const PREVIEW={'#hikari':['finale',4],'#mori':['tubef',3]}[location.hash];
+const PREVIEW={'#hikari':['finale',4],'#mori':['tubef',3],'#harp':['harp',4]}[location.hash];
 const finTest=!!PREVIEW;   // try the finale right away: index.html#hikari (nothing is saved)if(kazanTest){volc=true}   // for trying it out: index.html#kazan
 const SEANAMES=['はじまりの海','こわい顔の海','凍える南極の海','海の底の湖','いちばん深い海溝'];
 function seaN(){return((returns%5)+5)%5}
@@ -234,7 +234,7 @@ function curCrea(){return volc?CREA6:CREAS[seaN()]}
 let crTap=0;
 function tapOpen(hold){if(crTap<=0)return 0;return Math.min(1,crTap/.18)*(crTap>hold?Math.max(0,1-(crTap-hold)/.35):1)}
 /* creatures met only during the milestone events */
-const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage','harimushi'];
+const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage','harimushi','harp'];
 const ZTOTAL=ALLC.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
 let cr=null,crT=5,pops=[],returns=0,finE=null;
@@ -932,7 +932,7 @@ const SEQ2=['whale','vent','deme','bone','glow','blob','lily','squid','hoya','tr
 const SEQS=[SEQ1,SEQ2,
   ['garden','whale','vent','krill','deme','glow','lily','squid','hoya','treasure'],
   ['garden','whale','vent','brine','deme','glow','phro','blob','squid','tubef','treasure'],
-  ['garden','whale','vent','amphi','deme','glow','bone','squid','hoya','treasure','finale']];
+  ['garden','whale','vent','amphi','deme','glow','bone','squid','harp','treasure','finale']];
 let SEQ=SEQS[seaN()];
 const EV={};   // events added for the 3rd-5th seas register themselves here
 const NAMES={vent:'熱水の丘',whale:'クジラ',glow:'夜光の海',squid:'巨大イカの影',treasure:'海底の宝箱',deme:'デメニギス',lily:'ウミユリの森',blob:'ブロブフィッシュ',hoya:'オオグチボヤ',bone:'クジラの骨の森',garden:'チンアナゴの砂地',krill:'オキアミの大群',brine:'深海の湖',amphi:'ヨコエビの大群'};
@@ -2664,6 +2664,103 @@ NAMES.phro='オオタルマワシ';
    Crabs climb the tubes, and a pale fish threads between them. ---- */
 let tubes=[],tfCrabs=[],tfFish=null;
 NAMES.tubef='チューブワームの森';
+
+/* ---- ハープ海綿 (5th sea): carnivorous sponges shaped like harps stand on the mud.
+   Tiny crustaceans drift by; touch one and the current carries it onto a branch,
+   where the sponge's hooks catch it and wrap it up. ---- */
+let harps=[],hprey=[];
+NAMES.harp='ハープ海綿';
+function harpBranches(hp,t){   // each branch: base point, top point
+  const out=[],sw=Math.sin(t*.6+hp.ph)*.04;
+  for(const v of hp.vanes){const n=v.n;
+    for(let i=0;i<n;i++){const f=n>1?i/(n-1):.5,bx=hp.x+v.dx+(f-.5)*v.w,by=hp.y-v.lift-Math.sin(f*Math.PI)*v.lift*.35;
+      const hh=v.h*(.85+.15*Math.sin(i*1.9+hp.ph))*Math.min(1,hp.g);
+      out.push({bx,by,tx:bx+sw*hh+Math.sin(t*.9+i+hp.ph)*2,ty:by-hh,v,i})}}
+  return out;
+}
+EV.harp={len:26,lb:['えさ','こ'],bubbles:true,
+  start(){
+    harps=[];hprey=[];const n=W<500?2:3,sc=vScale();
+    for(let k=0;k<n;k++){const x=W*(k+.5)/n,y=floorY(x)-4;
+      const vanes=[];const vn=1+(Math.random()<.6?1:0);
+      for(let j=0;j<vn;j++)vanes.push({dx:(j-(vn-1)/2)*W/n*.38,w:Math.min(W/n*.7,200)*sc*(.8+Math.random()*.2),n:6+Math.floor(Math.random()*3),
+        h:H*(.2+Math.random()*.07)*sc,lift:H*.025});
+      harps.push({x,y,vanes,ph:Math.random()*6,g:-k*.4,glow:0,meals:[]})}
+    for(let i=0;i<8;i++)hprey.push(newPrey(true));
+    evt.pT=.5;const first=meet('harp');shimmer();
+    showToast('<b>ハープ海綿'+(first?'<br>はじめまして！':'')+'</b>竪琴のような形をした、肉食の海綿です。枝には小さなかぎがびっしり。ただよう小さなエビにふれると、海綿のほうへ流れていきます。えさをあげてみよう',5000);
+  },
+  step(dt){
+    const e=evt,fin=e.t>e.len-3,t=performance.now()/1000;
+    for(const hp of harps){hp.g=Math.min(1,hp.g+dt*.6);hp.glow=Math.max(0,hp.glow-dt*.6);
+      for(let i=hp.meals.length-1;i>=0;i--){const m=hp.meals[i];m.t+=dt;if(m.t>9)hp.meals.splice(i,1)}}
+    e.pT-=dt;if(e.pT<=0&&!fin&&hprey.length<14){e.pT=.6+Math.random()*.8;hprey.push(newPrey(false))}
+    for(let i=hprey.length-1;i>=0;i--){const p=hprey[i];p.ph+=dt;
+      if(p.go){const b=p.go,dx=b.tx-p.x,dy=(b.ty+(b.by-b.ty)*.3)-p.y,d=Math.hypot(dx,dy)||1;
+        p.vx+=(dx/d*130-p.vx)*Math.min(1,dt*4);p.vy+=(dy/d*130-p.vy)*Math.min(1,dt*4);
+        if(d<8){harpEat(p.hp,b,p);hprey.splice(i,1);continue}}
+      else{if(Math.random()<dt*.8){p.vx+=(Math.random()-.5)*60;p.vy-=20+Math.random()*20}
+        p.vx+=(Math.sin(p.ph*.7)*14+12-p.vx)*Math.min(1,dt*.8);p.vy+=(10-p.vy)*Math.min(1,dt*.8)}
+      p.x+=p.vx*dt;p.y+=p.vy*dt;
+      if(p.x>W+30||p.y>H+20||p.y<-30)hprey.splice(i,1)}
+  },
+  hit(px,py){
+    const t=performance.now()/1000;
+    for(const p of hprey){if(p.go||(px-p.x)**2+(py-p.y)**2>(p.s*2+22)**2)continue;
+      let best=null,bd=1e9,bh=null;
+      for(const hp of harps){if(hp.g<1)continue;for(const b of harpBranches(hp,t)){
+        if(hp.meals.some(m=>m.b===b.i&&m.v===b.v))continue;const d=(b.tx-p.x)**2+(b.ty-p.y)**2;if(d<bd){bd=d;best=b;bh=hp}}}
+      if(best){p.go=best;p.hp=bh;blip();pops.push({x:p.x,y:p.y-18,life:.7,txt:'すいっ',col:'#fff2e6'})}
+      return true}
+    for(const hp of harps){if(Math.abs(px-hp.x)<W/harps.length*.4&&py>hp.y-H*.25&&py<hp.y+10){hp.glow=Math.max(hp.glow,.5);return true}}
+    return false;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.2,1.6);if(a<=0)return;
+    cx.save();cx.globalAlpha=a;seaFloor(.6);
+    for(const hp of harps){if(hp.g<=0)continue;const br=harpBranches(hp,t),vs=vScale();
+      // the creeping root on the mud
+      cx.strokeStyle='rgba(225,215,200,.75)';cx.lineWidth=3*vs;cx.lineCap='round';cx.beginPath();
+      cx.moveTo(hp.x-W/harps.length*.42,hp.y+3);cx.quadraticCurveTo(hp.x,hp.y-6,hp.x+W/harps.length*.42,hp.y+2);cx.stroke();
+      for(const v of hp.vanes){const x0=hp.x+v.dx-v.w/2,x1=hp.x+v.dx+v.w/2,y0=hp.y-v.lift;
+        cx.strokeStyle='#e8ddd0';cx.lineWidth=3.2*vs;cx.beginPath();cx.moveTo(hp.x+v.dx,hp.y);cx.lineTo(hp.x+v.dx,y0);cx.stroke();
+        cx.beginPath();cx.moveTo(x0,y0);cx.quadraticCurveTo(hp.x+v.dx,y0-v.lift*.7,x1,y0);cx.stroke()}
+      for(const b of br){
+        cx.strokeStyle='rgba(240,232,220,.92)';cx.lineWidth=2.2*vs;cx.beginPath();cx.moveTo(b.bx,b.by);cx.lineTo(b.tx,b.ty);cx.stroke();
+        cx.strokeStyle='rgba(255,250,240,.35)';cx.lineWidth=1;cx.beginPath();   // the tiny hooks
+        for(let k=1;k<7;k++){const f=k/7,x=b.bx+(b.tx-b.bx)*f,y=b.by+(b.ty-b.by)*f;cx.moveTo(x,y);cx.lineTo(x-3*vs,y-2*vs);cx.moveTo(x,y);cx.lineTo(x+3*vs,y-2*vs)}
+        cx.stroke();
+        const gl=hp.glow,r=6*vs;
+        cx.save();cx.globalCompositeOperation='lighter';
+        const g=cx.createRadialGradient(b.tx,b.ty,0,b.tx,b.ty,r*(3+gl*3));g.addColorStop(0,`rgba(190,235,255,${.25+.45*gl})`);g.addColorStop(1,'rgba(190,235,255,0)');
+        cx.fillStyle=g;cx.beginPath();cx.arc(b.tx,b.ty,r*(3+gl*3),0,TAU);cx.fill();cx.restore();
+        cx.fillStyle='#f6efe4';cx.beginPath();cx.arc(b.tx,b.ty,r,0,TAU);cx.fill()}
+      // meals wrapped up on the branches, slowly digested
+      for(const m of hp.meals){const b=br.find(q=>q.v===m.v&&q.i===m.b);if(!b)continue;const k=Math.max(0,1-m.t/9),x=b.tx+(b.bx-b.tx)*.3,y=b.ty+(b.by-b.ty)*.3;
+        cx.fillStyle=`rgba(255,190,170,${.9*k})`;cx.beginPath();cx.ellipse(x,y,6*vs*(.5+.5*k),8*vs*(.5+.5*k),0,0,TAU);cx.fill();
+        cx.strokeStyle=`rgba(255,255,250,${.7*k})`;cx.lineWidth=1.2;cx.stroke()}
+    }
+    for(const p of hprey){const an=Math.atan2(p.vy,p.vx),S=p.s;
+      cx.save();cx.translate(p.x,p.y);cx.rotate(an);
+      cx.save();cx.globalCompositeOperation='lighter';cx.fillStyle='rgba(255,180,190,.18)';cx.beginPath();cx.arc(0,0,S*2.6,0,TAU);cx.fill();cx.restore();
+      cx.fillStyle='#ffc8c8';cx.beginPath();cx.ellipse(0,0,S,S*.5,0,0,TAU);cx.fill();
+      cx.strokeStyle='rgba(255,210,210,.8)';cx.lineWidth=1;cx.beginPath();
+      cx.moveTo(S*.8,-S*.1);cx.lineTo(S*2,-S*.8+Math.sin(p.ph*8)*S*.3);cx.moveTo(S*.8,S*.1);cx.lineTo(S*2,S*.6+Math.sin(p.ph*8+1)*S*.3);
+      for(let k=0;k<3;k++){cx.moveTo(-S*.3+k*S*.35,S*.4);cx.lineTo(-S*.4+k*S*.35+Math.sin(p.ph*14+k)*S*.2,S*.95)}cx.stroke();
+      cx.fillStyle='#2a1414';cx.beginPath();cx.arc(S*.6,-S*.15,S*.14,0,TAU);cx.fill();cx.restore()}
+    cx.restore();
+  },
+  end(){harps=[];hprey=[]},
+  msg(n){return'<b>えさ '+n+' こ</b>をハープ海綿にあげました。白い竪琴は、またしずかに次のえさを待っています'}
+};
+function newPrey(init){
+  return{x:init?W*Math.random():-20,y:H*(.25+Math.random()*.4),vx:15+Math.random()*10,vy:0,ph:Math.random()*6,s:(5.5+Math.random()*2)*vScale(),go:null,hp:null};
+}
+function harpEat(hp,b,p){
+  hp.meals.push({v:b.v,b:b.i,t:0});hp.glow=1;score+=3;evt.n++;$('evn').textContent=evt.n;
+  for(let k=0;k<10;k++){const a=Math.random()*TAU,s=30+Math.random()*60;bits.push({x:b.tx,y:b.ty,vx:Math.cos(a)*s,vy:Math.sin(a)*s,r:1+Math.random()*1.6,life:.8,col:'#d8f4ff'})}
+  pops.push({x:b.tx,y:b.ty-22,life:1,txt:'ぴたっ +3',col:'#d8f4ff'});chime(784);update();
+}
 function tfTip(q,t){
   const g=Math.max(0,Math.min(1,(evt?evt.t:9)-q.grow)),h=q.h*ease(g);
   return{x:q.x+q.lean*h+Math.sin(t*.9+q.ph)*h*.05,y:q.y-h,h};
