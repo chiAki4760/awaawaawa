@@ -252,7 +252,7 @@ let volc=false,total=0,volcOpen=false;
 try{total=+localStorage.getItem('awa-total')||0}catch(e){}
 function volcReady(){return returns>=5&&total>=VOLC_NEED}   // both: 5 seas visited AND 4000 points in all
 let kazanTest=location.hash==='#kazan';
-const PREVIEW={'#hikari':['finale',4],'#mori':['tubef',3],'#harp':['harp',4],'#ice':['ice',3]}[location.hash];
+const PREVIEW={'#hone':['bone',1],'#hikari':['finale',4],'#mori':['tubef',3],'#harp':['harp',4],'#ice':['ice',3]}[location.hash];
 const erabuTest=location.hash==='#erabu';   // try the sea picker right away: index.html#erabu (nothing is saved)
 const finTest=!!PREVIEW||erabuTest;   // try the finale right away: index.html#hikari (nothing is saved)
 if(kazanTest){volc=true}   // for trying it out: index.html#kazan
