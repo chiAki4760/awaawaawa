@@ -225,7 +225,7 @@ let volc=false,total=0,volcOpen=false;
 try{total=+localStorage.getItem('awa-total')||0}catch(e){}
 function volcReady(){return returns>=5&&total>=VOLC_NEED}   // both: 5 seas visited AND 4000 points in all
 let kazanTest=location.hash==='#kazan';
-const PREVIEW={'#hikari':['finale',4],'#mori':['tubef',3],'#harp':['harp',4]}[location.hash];
+const PREVIEW={'#hikari':['finale',4],'#mori':['tubef',3],'#harp':['harp',4],'#ice':['ice',3]}[location.hash];
 const finTest=!!PREVIEW;   // try the finale right away: index.html#hikari (nothing is saved)if(kazanTest){volc=true}   // for trying it out: index.html#kazan
 const SEANAMES=['はじまりの海','こわい顔の海','凍える南極の海','海の底の湖','いちばん深い海溝'];
 function seaN(){return((returns%5)+5)%5}
@@ -234,7 +234,7 @@ function curCrea(){return volc?CREA6:CREAS[seaN()]}
 let crTap=0;
 function tapOpen(hold){if(crTap<=0)return 0;return Math.min(1,crTap/.18)*(crTap>hold?Math.max(0,1-(crTap-hold)/.35):1)}
 /* creatures met only during the milestone events */
-const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage','harimushi','harp','spaghetti'];
+const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage','harimushi','harp','spaghetti','iceworm'];
 const ZTOTAL=ALLC.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
 let cr=null,crT=5,pops=[],returns=0,finE=null;
@@ -931,7 +931,7 @@ const SEQ1=['whale','vent','deme','glow','blob','lily','squid','hoya','vent','tr
 const SEQ2=['whale','vent','deme','bone','glow','blob','lily','squid','hoya','treasure'];   // 2nd sea: the bone forest
 const SEQS=[SEQ1,SEQ2,
   ['garden','whale','vent','krill','deme','glow','lily','squid','hoya','treasure'],
-  ['garden','whale','vent','brine','deme','glow','phro','blob','squid','tubef','treasure'],
+  ['garden','whale','vent','brine','deme','glow','phro','ice','squid','tubef','treasure'],
   ['garden','whale','vent','amphi','deme','glow','bone','squid','harp','treasure','finale']];
 let SEQ=SEQS[seaN()];
 const EV={};   // events added for the 3rd-5th seas register themselves here
@@ -2688,6 +2688,82 @@ function drawSpag(w,t){
     cx.beginPath();p.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.stroke();cx.restore()}
 }
 NAMES.tubef='チューブワームの森';
+
+/* ---- アイスワームの氷 (4th sea): a mound of methane "ice" on the sea floor, riddled with
+   holes — and in every hole, a pink bristly worm. More and more of them poke out as you watch.
+   Touch them and they duck in; touch the ice and methane bubbles burble up. ---- */
+let iceW=[],iceLumps=[],iceMats=[];
+NAMES.ice='アイスワームの氷';
+function iceGeo(){return{x:W/2,y:H*.8,rx:Math.min(W*.47,270),ry:H*.12}}
+function iceBubble(x,y,big){const r=(big?7:5)+Math.random()*6;
+  bubbles.push({x,y,r,sp:55+Math.random()*35,ph:Math.random()*6.28,wf:1.6,wa:7,hue:190+Math.random()*20,pearl:false,glow:false,born:.15})}
+EV.ice={len:26,lb:['アイスワーム','ひき'],bubbles:true,
+  start(){
+    const g=iceGeo(),vs=vScale();iceW=[];iceLumps=[];iceMats=[];
+    for(let i=0;i<9;i++){const a=(i/8-.5)*2.6;iceLumps.push({x:g.x+Math.sin(a)*g.rx*.72,y:g.y+g.ry*.25-Math.cos(a)*g.ry*.35,rx:g.rx*(.24+Math.random()*.12),ry:g.ry*(.5+Math.random()*.35),ph:Math.random()*6})}
+    iceLumps.push({x:g.x,y:g.y-g.ry*.15,rx:g.rx*.45,ry:g.ry*.95,ph:1});
+    iceLumps.sort((a,b)=>a.y-b.y);
+    for(let i=0;i<8;i++)iceMats.push({x:g.x+(Math.random()-.5)*g.rx*1.6,y:g.y+(Math.random()-.3)*g.ry*.9,r:(10+Math.random()*16)*vs,c:Math.random()<.55?'255,165,80':'245,240,225'});
+    const n=Math.round(Math.min(85,Math.max(48,W/4.6)));
+    for(let i=0;i<n;i++){let x,y;do{x=g.x+(Math.random()*2-1)*g.rx;y=g.y+(Math.random()*2-1)*g.ry}while(((x-g.x)/g.rx)**2+((y-g.y)/g.ry)**2>.82);
+      iceW.push({x,y,L:(15+Math.random()*16)*vs,a:-Math.PI/2+(x-g.x)/g.rx*.9+(Math.random()-.5)*.7,ph:Math.random()*6,out:0,hideAt:0,back:1+Math.random()*9,s:vs*(.8+Math.random()*.45),wig:0})}
+    iceW.sort((a,b)=>a.y-b.y);evt.bT=.4;evt.wv=7;
+    const first=meet('iceworm');rumble();
+    showToast('<b>アイスワームの氷'+(first?'<br>はじめまして！':'')+'</b>海の底に、メタンをとじこめた白い“氷”のかたまり。よく見ると…穴という穴から、ピンクのゴカイが！ふれると引っこみます。氷にふれると、メタンの泡がぷくぷく',5200);
+  },
+  step(dt){
+    const e=evt,now=e.t,fin=now>e.len-2.5,g=iceGeo();
+    for(const w of iceW){const hid=fin||(now>=w.hideAt&&now<w.back);w.out+=((hid?0:1)-w.out)*Math.min(1,dt*(hid?22:1.6));w.wig=Math.max(0,w.wig-dt)}
+    e.bT-=dt;if(e.bT<=0&&!fin){e.bT=.35+Math.random()*.6;iceBubble(g.x+(Math.random()-.5)*g.rx*1.3,g.y-g.ry*(.3+Math.random()*.5),false)}
+    e.wv-=dt;if(e.wv<=0&&!fin){e.wv=6+Math.random()*4;for(const w of iceW)w.wig=1.6;
+      pops.push({x:g.x,y:g.y-g.ry*1.8,life:1.2,txt:'ざわざわ…',col:'#ffb8c4'});noise(.8,'highpass',3000,.06)}
+  },
+  hit(px,py){
+    const now=evt.t,g=iceGeo();
+    let near=false;
+    for(const w of iceW){if(w.out<.3)continue;const tx=w.x+Math.cos(w.a)*w.L*w.out*.6,ty=w.y+Math.sin(w.a)*w.L*w.out*.6;
+      if((px-tx)**2+(py-ty)**2<(w.L*.5+20)**2){near=true;break}}
+    if(near){let n=0;const R=85*vScale();
+      for(const w of iceW){const d=Math.hypot(w.x-px,(w.y-py)*1.3);if(d>R)continue;
+        if(w.out>.5&&!(now>=w.hideAt&&now<w.back))n++;w.hideAt=now+d/420;w.back=w.hideAt+1.4+Math.random()*1.6}
+      if(n){const gg=Math.max(1,Math.round(n/3));score+=gg;evt.n+=n;$('evn').textContent=evt.n;
+        pops.push({x:px,y:py-30,life:.9,txt:'にゅっ +'+gg,col:'#ffb8c4'});hiss(.1);update()}
+      return true}
+    if(((px-g.x)/g.rx)**2+((py-g.y)/(g.ry*1.3))**2<=1){
+      for(let i=0;i<6;i++)iceBubble(px+(Math.random()-.5)*24,py-6-Math.random()*10,true);
+      pops.push({x:px,y:py-26,life:.8,txt:'ぷくぷく',col:'#d8f4ff'});noise(.3,'lowpass',500,.2);return true}
+    return false;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.2,1.6);if(a<=0)return;const g=iceGeo(),vs=vScale();
+    cx.save();cx.globalAlpha=a;seaFloor(.55);
+    // the methane ice
+    for(const L of iceLumps){const gr=cx.createRadialGradient(L.x-L.rx*.3,L.y-L.ry*.4,2,L.x,L.y,Math.max(L.rx,L.ry));
+      gr.addColorStop(0,'rgba(250,250,240,.97)');gr.addColorStop(.6,'rgba(222,228,215,.95)');gr.addColorStop(1,'rgba(160,170,160,.92)');
+      cx.fillStyle=gr;cx.beginPath();cx.ellipse(L.x,L.y,L.rx,L.ry,0,0,TAU);cx.fill();
+      cx.strokeStyle='rgba(255,255,255,.5)';cx.lineWidth=1.5;cx.beginPath();cx.ellipse(L.x-L.rx*.25,L.y-L.ry*.45,L.rx*.45,L.ry*.18,-.2,Math.PI*1.1,Math.PI*1.9);cx.stroke();
+      cx.strokeStyle='rgba(120,130,125,.35)';cx.lineWidth=1;cx.beginPath();
+      cx.moveTo(L.x-L.rx*.4,L.y+L.ry*.1);cx.lineTo(L.x-L.rx*.1,L.y+L.ry*.3);cx.lineTo(L.x+L.rx*.2,L.y+L.ry*.15);cx.stroke()}
+    for(const m of iceMats){const gr=cx.createRadialGradient(m.x,m.y,0,m.x,m.y,m.r);gr.addColorStop(0,`rgba(${m.c},.55)`);gr.addColorStop(1,`rgba(${m.c},0)`);
+      cx.fillStyle=gr;cx.beginPath();cx.ellipse(m.x,m.y,m.r,m.r*.55,0,0,TAU);cx.fill()}
+    // burrows and worms
+    for(const w of iceW){cx.fillStyle='rgba(70,55,60,.85)';cx.beginPath();cx.ellipse(w.x,w.y,3.6*w.s,2.2*w.s,0,0,TAU);cx.fill()}
+    for(const w of iceW){if(w.out<.05)continue;
+      const L=w.L*w.out,N=8,wg=w.wig>0?2.6:1,pts=[];let x=w.x,y=w.y;
+      for(let i=0;i<=N;i++){const f=i/N,an=w.a+Math.sin(t*3*wg+w.ph+f*4)*.55*f*Math.min(1.6,wg*.7);pts.push([x,y,f,an]);x+=Math.cos(an)*L/N;y+=Math.sin(an)*L/N}
+      cx.strokeStyle='rgba(255,235,240,.75)';cx.lineWidth=.8;cx.beginPath();
+      for(const [px,py,f,an] of pts){if(f<.12)continue;const bl=4*w.s*(1-f*.3),wv=Math.sin(t*9*wg+f*10+w.ph)*.4;
+        for(const sd of[-1,1]){const b=an+sd*(Math.PI/2+wv*sd);cx.moveTo(px,py);cx.lineTo(px+Math.cos(b)*bl,py+Math.sin(b)*bl)}}
+      cx.stroke();
+      for(const [px,py,f] of pts){const r=3.1*w.s*(1-f*.25);cx.fillStyle=f>.95?'#ff8aa0':'#ffa6b6';cx.beginPath();cx.arc(px,py,r,0,TAU);cx.fill();
+        cx.strokeStyle='rgba(200,80,100,.45)';cx.lineWidth=.8;cx.stroke()}
+      const [hx,hy,,ha]=pts[N];cx.fillStyle='#3a1418';
+      cx.beginPath();cx.arc(hx+Math.cos(ha-.6)*2*w.s,hy+Math.sin(ha-.6)*2*w.s,.8*w.s,0,TAU);cx.arc(hx+Math.cos(ha+.6)*2*w.s,hy+Math.sin(ha+.6)*2*w.s,.8*w.s,0,TAU);cx.fill()}
+    cx.restore();
+  },
+  end(){iceW=[];iceLumps=[];iceMats=[]},
+  msg(n){return'<b>'+n+' ひき</b>のアイスワームが引っこみました。…でも、穴の奥には、まだまだたくさんいるようです'}
+};
 
 /* ---- ハープ海綿 (5th sea): carnivorous sponges shaped like harps stand on the mud.
    Tiny crustaceans drift by; touch one and the current carries it onto a branch,
