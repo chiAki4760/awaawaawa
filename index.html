@@ -80,6 +80,12 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
 .pick .sea small{display:block;font-size:10px;color:var(--soft);letter-spacing:.06em}
 .pick .sea.nx{background:rgba(191,243,240,.18);border-color:rgba(191,243,240,.55)}
 .pick .sea:last-child:nth-child(odd){grid-column:1 / -1}
+.pick .sea[disabled]{opacity:.45;cursor:default}
+.seas.can{pointer-events:auto;cursor:pointer;padding:6px 0 6px 8px;margin:-6px 0}
+.seas.can #seaName{text-decoration:underline dotted rgba(232,251,250,.55);text-underline-offset:3px}
+.seas.can #seaName::after{content:" ▾";font-size:10px;color:var(--glow)}
+#seac .go.volc{display:block;margin:10px auto 0}
+#seac .no{display:block;margin:12px auto 0}
 .endc .t{display:block;font-size:28px;font-weight:700;color:var(--ink)}
 .endc .s{margin:6px 0 16px;font-size:14px;line-height:1.7;color:var(--soft)}
 .endc dl{display:grid;grid-template-columns:auto auto;gap:6px 14px;margin:0 auto 18px;width:max-content;text-align:left;font-size:14px}
@@ -142,6 +148,13 @@ body{background:var(--deep);color:var(--ink);font-family:var(--round);
   <p class="lb" id="lBody"></p>
   <span class="ls" id="lSign">ナギ</span>
   <button class="btn" id="lClose" type="button">たたんで、しまう</button>
+</div>
+<div class="endc" id="seac" role="dialog" aria-label="海をえらぶ">
+  <b class="t" style="font-size:22px">海をえらぶ</b>
+  <p class="s" id="seacMsg"></p>
+  <div class="pick"><div class="grid" id="seacGrid"></div></div>
+  <button class="btn go volc" id="seacVolc" type="button" hidden>🌋 海底火山へ</button>
+  <button class="btn no" id="seacNo" type="button">やめる</button>
 </div>
 <div class="endc" id="resetc" role="dialog" aria-label="きろくのリセット">
   <b class="t" style="font-size:22px">きろくのリセット</b>
@@ -3494,7 +3507,7 @@ function showEnd(){
   $('endc').classList.add('show');$('endc').scrollTop=0;happy();
 }
 /* once all five seas have been visited, any sea can be chosen for the next dive */
-const SEADESC=['メンダコ・熱水のエビ','オニキンメ・骨の森','クリオネ・オキアミ','タルマワシ・アイスワーム','光のフィナーレ'];
+const SEADESC=['メンダコ・熱水のエビ','オニキンメ・骨の森','クリオネ・オキアミ','タルマワシ・深海の湖','光のフィナーレ'];
 function buildPick(fin){
   const on=canPick()&&(!finTest||erabuTest);$('pick').hidden=!on;$('again').hidden=on;
   if(!on)return;
@@ -3507,6 +3520,25 @@ function buildPick(fin){
     g.appendChild(b)});
   if(!volc&&!$('eNext').querySelector('b'))$('eNext').textContent=fin?'5つの海をぜんぶめぐりました。ここからは、すきな海をえらんでもぐれます':'すきな海をえらんでもぐれます';
 }
+/* the sea picker can also be opened mid-dive by tapping the sea name (once all five seas are done) */
+let sWasPaused=false;
+function seacOpen(){
+  if(!canPick()||(evt&&evt.kind==='sub')||['endc','letterc','resetc','seac'].some(id=>$(id).classList.contains('show')))return;
+  sWasPaused=paused;paused=true;
+  $('seacMsg').innerHTML='いまの海をやめて、えらんだ海の水面からもぐりなおします。<br><small>この旅の '+score+' 点は、合計点には入りません</small>';
+  const g=$('seacGrid');g.innerHTML='';
+  SEANAMES.forEach((nm,i)=>{const b=document.createElement('button');b.type='button';b.className='btn sea';
+    const cur=!volc&&i===seaN();b.disabled=cur;
+    b.innerHTML=(i+1)+'. '+nm+'<small>'+(cur?'いまの海':SEADESC[i])+'</small>';
+    b.onclick=e=>{e.stopPropagation();volc=false;pickSea=i;if(!finTest)try{localStorage.setItem('awa-pick',i)}catch(_){}seacClose(true);restart()};
+    g.appendChild(b)});
+  $('seacVolc').hidden=!volcOpen||volc;
+  $('seac').classList.add('show');$('seac').scrollTop=0;
+}
+function seacClose(go){$('seac').classList.remove('show');paused=go?false:sWasPaused;$('pause').textContent=paused?'つづける':'ひと休み';if(!paused)t0=performance.now();if(go)showToast('',0)}
+$('seas').onclick=e=>{e.stopPropagation();seacOpen()};
+$('seacNo').onclick=e=>{e.stopPropagation();seacClose(false)};
+$('seacVolc').onclick=e=>{e.stopPropagation();volc=true;seacClose(true);restart()};
 function restart(){
   $('endc').classList.remove('show');
   evt=null;pendingEvt=null;sub=null;parade=[];depthK=null;cr=null;crT=5;bottle=null;finE=null;
@@ -3813,7 +3845,8 @@ function burst(b){
 }
 
 function showSeas(){
-  if(volc){document.querySelectorAll('#seas i').forEach(d=>d.className='done');$('seaName').textContent='🌋 海底火山';$('seas').setAttribute('aria-label','海底火山');return}
+  if(volc){$('seas').classList.toggle('can',canPick());document.querySelectorAll('#seas i').forEach(d=>d.className='done');$('seaName').textContent='🌋 海底火山';$('seas').setAttribute('aria-label','海底火山');return}
+  $('seas').classList.toggle('can',canPick()&&!(finTest&&!erabuTest));
   const n=seaN(),lap=Math.floor(returns/5)+1;
   document.querySelectorAll('#seas i').forEach((d,i)=>d.className=i===n?'now':(i<n||canPick())?'done':'');
   $('seaName').textContent=(lap>1?lap+'周目・':'')+SEANAMES[n];
