@@ -2856,12 +2856,12 @@ EV.harp={len:26,lb:['えさ','こ'],bubbles:true,
 function drawMeal(m,b,t,vs){
   const x=b.tx+(b.bx-b.tx)*.3,y=b.ty+(b.by-b.ty)*.3,an=Math.atan2(b.ty-b.by,b.tx-b.bx),L=Math.hypot(b.tx-b.bx,b.ty-b.by);
   const wrap=ease(Math.max(0,Math.min(1,(m.t-.5)/3))),shrink=Math.max(0,Math.min(1,(m.t-5)/10)),fade=1-shrink;
-  // the prey itself, struggling at first, dimming as it is covered
-  const pa=Math.max(0,1-wrap*.75-shrink*.25)*fade,tw=Math.max(0,1-m.t/3)*Math.sin(t*28)*.5;
+  // the prey itself, resting quietly, dimming as it is covered
+  const pa=Math.max(0,1-wrap*.75-shrink*.25)*fade,tw=0;
   if(pa>.02){const S=7*vs*(1-shrink*.6);cx.save();cx.globalAlpha*=pa;cx.translate(x+S*.8,y);cx.rotate(.4+tw);
     cx.fillStyle='#ffc8c8';cx.beginPath();cx.ellipse(0,0,S,S*.5,0,0,TAU);cx.fill();
     cx.strokeStyle='rgba(255,210,210,.9)';cx.lineWidth=1;cx.beginPath();
-    for(let k=0;k<3;k++){cx.moveTo(-S*.3+k*S*.35,S*.4);cx.lineTo(-S*.4+k*S*.35+Math.sin(t*30+k)*S*.3*(1-wrap),S*1.05)}
+    for(let k=0;k<3;k++){cx.moveTo(-S*.3+k*S*.35,S*.4);cx.lineTo(-S*.4+k*S*.35,S*1.05)}
     cx.moveTo(S*.8,0);cx.lineTo(S*2,-S*.7+tw*S);cx.stroke();cx.restore()}
   if(wrap<=0)return;
   // the film spreading along the branch from the catch
