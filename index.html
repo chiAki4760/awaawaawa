@@ -2743,6 +2743,9 @@ function finPath(u,t){   // a slow, wide figure the head of the chain swims alon
   return{x:W*.5+Math.sin(u*.9+t*.05)*W*.36+Math.sin(u*2.3)*W*.06,
          y:H*.5+Math.sin(u*1.7+1)*H*.24+Math.cos(u*.6)*H*.04};
 }
+function parFade(y){   // fade in from the bottom edge, melt away softly toward the top
+  return Math.max(0,Math.min(1,(y-H*.04)/(H*.34),(H+70-y)/130));
+}
 function finDraw(t){
     const f=finE;if(!f)return;
     // the lights go out
@@ -2752,14 +2755,14 @@ function finDraw(t){
       cx.beginPath();cx.arc(s.x*W,s.y*H,s.s,0,TAU);cx.fill()}
     cx.restore();
     // the parade (behind the siphonophore)
-    for(const q of f.parade){if(q.y<-90||q.y>H+90)continue;const S=crSize()*.62;
-      cx.save();cx.translate(q.x,q.y);
+    for(const q of f.parade){if(q.y<-90||q.y>H+90)continue;const S=crSize()*.62,fa=parFade(q.y);if(fa<=0)continue;
+      cx.save();cx.globalAlpha=fa;cx.translate(q.x,q.y);
       cx.save();cx.globalCompositeOperation='lighter';
       const g=cx.createRadialGradient(0,0,0,0,0,S*2);g.addColorStop(0,`hsla(${q.hue},90%,70%,.35)`);g.addColorStop(1,`hsla(${q.hue},90%,70%,0)`);
       cx.fillStyle=g;cx.beginPath();cx.arc(0,0,S*2,0,TAU);cx.fill();cx.restore();
-      cx.globalAlpha=.95;cx.scale(q.dir,1);DRAW[q.id](S,t,true);cx.restore();
-      cx.textAlign='center';cx.font='700 12px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif';
-      cx.fillStyle='rgba(232,251,250,.8)';cx.fillText(q.name,Math.max(50,Math.min(W-50,q.x)),q.y+S*1.25)}
+      cx.globalAlpha=.95*fa;cx.scale(q.dir,1);DRAW[q.id](S,t,true);cx.restore();
+      cx.globalAlpha=fa;cx.textAlign='center';cx.font='700 12px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif';
+      cx.fillStyle='rgba(232,251,250,.8)';cx.fillText(q.name,Math.max(50,Math.min(W-50,q.x)),q.y+S*1.25);cx.globalAlpha=1}
     // the giant siphonophore
     const tr=f.trail,N=f.N,vs=vScale();
     const glowAt=i=>{let g=0;for(const p of f.pulses){const d=Math.abs(i-p.i)-p.r;if(d>-6&&d<2)g=Math.max(g,1-Math.abs(d+2)/4)}return g};
@@ -2820,7 +2823,9 @@ function finStep(dt){
     list=list.slice().sort(()=>Math.random()-.5).slice(0,16);
     list.forEach((c,i)=>f.parade.push({id:c.id,name:c.name,x:W*(.12+((i*.37)%1)*.76),y:H+60+i*70,dir:Math.random()<.5?-1:1,ph:Math.random()*6,hue:(i*47)%360}));
     shimmer();showToast('<b>みんなが集まってきた</b>5つの海で出会った生き物たちが、光の下に集まってきます。どこでもふれると、光がはじけます',4200)}
-  for(const q of f.parade){q.ph+=dt;q.y-=dt*(up?-115:outro?34:58);q.x+=Math.sin(q.ph*.8)*12*dt}
+  for(const q of f.parade){q.ph+=dt;q.y-=dt*(up?-115:outro?34:58);q.x+=Math.sin(q.ph*.8)*12*dt;
+    const fa=parFade(q.y);if(!up&&q.y<H*.4&&fa>0&&Math.random()<dt*5*(1-fa+.2))
+      f.sparks.push({x:q.x+(Math.random()-.5)*40,y:q.y+(Math.random()-.5)*30,vx:(Math.random()-.5)*12,vy:-(14+Math.random()*20),life:1.4,hue:q.hue+Math.random()*30,slow:1})}
   if(up&&f.lift>=1)finE=null;
 }
 EV.finale={len:50,lb:['ひかり','回'],bubbles:true,
@@ -3148,14 +3153,14 @@ function drawParade(t){
   for(const q of parade){
     if(q.y<-120||q.y>H+120)continue;
     if(q.id==='ebi'){drawShrimp({x:q.x+Math.sin(q.ph*2)*20,y:q.y,s:10*vScale(),ph:q.ph,mode:'swim',ang:-Math.PI/2,hue:350});continue}
-    const S=crSize()*.75;
-    cx.save();cx.globalAlpha=.9;cx.translate(q.x,q.y);cx.scale(q.dir,1);
+    const S=crSize()*.75,fa=Math.max(0,Math.min(1,(q.y+60)/(H*.25),(H+40-q.y)/(H*.25)));if(fa<=0)continue;
+    cx.save();cx.globalAlpha=.9*fa;cx.translate(q.x,q.y);cx.scale(q.dir,1);
     const hg=cx.createRadialGradient(0,0,0,0,0,S*1.8);hg.addColorStop(0,'rgba(170,240,255,.18)');hg.addColorStop(1,'rgba(170,240,255,0)');
     cx.fillStyle=hg;cx.beginPath();cx.arc(0,0,S*1.8,0,TAU);cx.fill();
     DRAW[q.id](S,t,false);cx.restore();
     cx.textAlign='center';cx.font='700 13px "Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif';
     cx.fillStyle='rgba(232,251,250,.85)';const tw=cx.measureText(q.name).width,tx=Math.max(tw/2+8,Math.min(W-tw/2-8,q.x));
-    cx.fillText(q.name,tx,q.y+S*1.2);cx.fillStyle='rgba(255,230,170,.9)';cx.fillText('またね',tx,q.y+S*1.2+17);
+    cx.globalAlpha=fa;cx.fillText(q.name,tx,q.y+S*1.2);cx.fillStyle='rgba(255,230,170,.9)';cx.fillText('またね',tx,q.y+S*1.2+17);cx.globalAlpha=1;
   }
 }
 function drawSurface(t){
