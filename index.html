@@ -225,7 +225,8 @@ let volc=false,total=0,volcOpen=false;
 try{total=+localStorage.getItem('awa-total')||0}catch(e){}
 function volcReady(){return returns>=5&&total>=VOLC_NEED}   // both: 5 seas visited AND 4000 points in all
 let kazanTest=location.hash==='#kazan';
-const finTest=location.hash==='#hikari';   // try the finale right away: index.html#hikari (nothing is saved)if(kazanTest){volc=true}   // for trying it out: index.html#kazan
+const PREVIEW={'#hikari':['finale',4],'#mori':['tubef',3]}[location.hash];
+const finTest=!!PREVIEW;   // try the finale right away: index.html#hikari (nothing is saved)if(kazanTest){volc=true}   // for trying it out: index.html#kazan
 const SEANAMES=['はじまりの海','こわい顔の海','凍える南極の海','海の底の湖','いちばん深い海溝'];
 function seaN(){return((returns%5)+5)%5}
 function seaB(){return seaN()===1}
@@ -233,12 +234,12 @@ function curCrea(){return volc?CREA6:CREAS[seaN()]}
 let crTap=0;
 function tapOpen(hold){if(crTap<=0)return 0;return Math.min(1,crTap/.18)*(crTap>hold?Math.max(0,1-(crTap-hold)/.35):1)}
 /* creatures met only during the milestone events */
-const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage'];
+const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage','harimushi'];
 const ZTOTAL=ALLC.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
 let cr=null,crT=5,pops=[],returns=0,finE=null;
 try{returns=+localStorage.getItem('awa-return')||0}catch(e){}
-if(finTest)returns=4;
+if(finTest)returns=PREVIEW[1];
 let evt=null,pendingEvt=null,seqI=0,nextAt=50;
 function showMet(){$('zukan').textContent='であった生き物 '+met.length+' / '+ZTOTAL}
 showMet();
@@ -930,7 +931,7 @@ const SEQ1=['whale','vent','deme','glow','blob','lily','squid','hoya','vent','tr
 const SEQ2=['whale','vent','deme','bone','glow','blob','lily','squid','hoya','treasure'];   // 2nd sea: the bone forest
 const SEQS=[SEQ1,SEQ2,
   ['garden','whale','vent','krill','deme','glow','lily','squid','hoya','treasure'],
-  ['garden','whale','vent','brine','deme','glow','phro','blob','squid','bone','treasure'],
+  ['garden','whale','vent','brine','deme','glow','phro','blob','squid','tubef','treasure'],
   ['garden','whale','vent','amphi','deme','glow','bone','squid','hoya','treasure','finale']];
 let SEQ=SEQS[seaN()];
 const EV={};   // events added for the 3rd-5th seas register themselves here
@@ -2657,6 +2658,97 @@ EV.phro={len:30,lb:['あかちゃん','ひき'],bubbles:false,
   msg(n){return'<b>あかちゃん '+n+' ひき</b>がタルにもどりました。オオタルマワシは、ゆりかごを押して深みへ帰っていきます'}
 };
 NAMES.phro='オオタルマワシ';
+
+/* ---- チューブワームの森 (4th sea): white tubes crowd the seep around the lake, each crowned
+   with a red plume. Touch them and they snap in, the wave rippling through the forest.
+   Crabs climb the tubes, and a pale fish threads between them. ---- */
+let tubes=[],tfCrabs=[],tfFish=null;
+NAMES.tubef='チューブワームの森';
+function tfTip(q,t){
+  const g=Math.max(0,Math.min(1,(evt?evt.t:9)-q.grow)),h=q.h*ease(g);
+  return{x:q.x+q.lean*h+Math.sin(t*.9+q.ph)*h*.05,y:q.y-h,h};
+}
+EV.tubef={len:26,lb:['ひっこめた','本'],bubbles:true,
+  start(){
+    tubes=[];tfCrabs=[];tfFish=null;const n=Math.round(Math.min(70,Math.max(42,W/6)));
+    for(let i=0;i<n;i++){const d=Math.random(),sc=(.45+d*.75)*vScale();
+      tubes.push({x:W*(-.02+Math.random()*1.04),d,sc,y:H*(.8+d*.16),h:H*(.16+Math.random()*.2)*(.65+d*.45),ph:Math.random()*6,
+        lean:(Math.random()-.5)*.3,out:0,hideAt:-1,back:1.2+Math.random()*2,grow:.3+Math.random()*1.4})}
+    tubes.sort((a,b)=>a.d-b.d);evt.cT=4;evt.fT=7;
+    const first=meet('harimushi');rumble();
+    showToast('<b>チューブワームの森'+(first?'<br>はじめまして！':'')+'</b>海の底からしみ出す水のまわりに、白い管がびっしり。赤いえらのチューブワームには、口もおなかもありません。体の中の細菌から栄養をもらいます。ふれると、しゅっと引っこみます',5200);
+  },
+  step(dt){
+    const e=evt,now=e.t,fin=now>e.len-2.5,t=performance.now()/1000;
+    for(const q of tubes){const hid=fin||now<q.grow+.8||(now>=q.hideAt&&now<q.back);
+      q.out+=((hid?0:1)-q.out)*Math.min(1,dt*(hid?20:1.8))}
+    e.cT-=dt;
+    if(e.cT<=0&&!fin&&tfCrabs.length<3){e.cT=3+Math.random()*3;const fr=tubes.filter(q=>q.d>.45);
+      const q=fr[Math.floor(Math.random()*fr.length)];if(q)tfCrabs.push({q,f:0,st:'up',ph:Math.random()*6,s:10*q.sc,mode:'swim',kani:true,vx:0,vy:0,x:q.x,y:q.y,stay:2+Math.random()*2})}
+    for(let i=tfCrabs.length-1;i>=0;i--){const c=tfCrabs[i];c.ph+=dt;
+      if(c.st==='up'){c.f=Math.min(.85,c.f+dt*.12);if(c.f>=.85){c.stay-=dt;if(c.stay<=0)c.st='down'}}
+      else if(c.st==='down'){c.f-=dt*.15;if(c.f<=0)tfCrabs.splice(i,1)}
+      if(c.st==='up'||c.st==='down'){const tp=tfTip(c.q,t);c.x=c.q.x+(tp.x-c.q.x)*c.f;c.y=c.q.y+(tp.y-c.q.y)*c.f;c.vx=0;
+        if(c.st==='up'&&c.f>.6&&!(now>=c.q.hideAt&&now<c.q.back)){c.q.hideAt=now;c.q.back=now+2}}
+      else{c.vy+=300*dt;c.x+=c.vx*dt;c.y+=c.vy*dt;if(c.y>H+40)tfCrabs.splice(i,1)}
+      if(fin&&c.st!=='fall'&&c.st!=='down')c.st='down'}
+    e.fT-=dt;
+    if(e.fT<=0&&!fin&&!tfFish){e.fT=7+Math.random()*4;const d=Math.random()<.5?1:-1;
+      tfFish={x:d>0?-80:W+80,y:H*(.62+Math.random()*.18),d,v:W/7,ph:0,dart:0}}
+    if(tfFish){const f=tfFish;f.ph+=dt;f.x+=f.d*f.v*(f.dart>0?4:1)*dt;if(f.dart>0)f.dart-=dt;
+      for(const q of tubes){const tp=tfTip(q,t);if(Math.abs(tp.x-f.x)<45&&Math.abs(tp.y-f.y)<60&&!(now>=q.hideAt&&now<q.back)){q.hideAt=now;q.back=now+1.5+Math.random()}}
+      if(f.x<-120||f.x>W+120)tfFish=null}
+  },
+  hit(px,py){
+    const now=evt.t,t=performance.now()/1000;
+    for(const c of tfCrabs){if(c.st==='fall')continue;
+      if((px-c.x)**2+(py-c.y)**2<=(c.s*2+18)**2){c.st='fall';c.vx=(Math.random()-.5)*120;c.vy=-120;score+=2;
+        pops.push({x:c.x,y:c.y-22,life:.9,txt:'ぽろっ +2',col:'#fff2e6'});blip();update();return true}}
+    if(tfFish&&(px-tfFish.x)**2+(py-tfFish.y)**2<=46**2&&tfFish.dart<=0){tfFish.dart=1.5;score+=2;
+      pops.push({x:tfFish.x,y:tfFish.y-24,life:.9,txt:'にゅるっ +2',col:'#ffe0e6'});noise(.2,'bandpass',900,.15);update();return true}
+    let near=false;for(const q of tubes){const tp=tfTip(q,t);if((px-tp.x)**2+(py-tp.y)**2<(30*q.sc+22)**2){near=true;break}}
+    if(!near)return false;
+    let n=0;const R=95*vScale();
+    for(const q of tubes){const tp=tfTip(q,t),d=Math.hypot(tp.x-px,tp.y-py);if(d>R)continue;
+      if(q.out>.5&&!(now>=q.hideAt&&now<q.back))n++;q.hideAt=now+d/420;q.back=q.hideAt+1.4+Math.random()*.8}
+    if(n){const g=Math.max(1,Math.round(n/3));score+=g;evt.n+=n;$('evn').textContent=evt.n;
+      pops.push({x:px,y:py-30,life:.9,txt:'しゅっ +'+g,col:'#ff9a9a'});hiss(.12);update()}
+    return true;
+  },
+  draw(t){
+    const e=evt,a=evFade(e,1.2,1.6);if(a<=0)return;
+    cx.save();cx.globalAlpha=a;seaFloor(.5);
+    cx.save();cx.globalCompositeOperation='lighter';
+    for(let i=0;i<5;i++){const x=W*(.1+i*.2)+Math.sin(t*.4+i)*20,g=cx.createRadialGradient(x,H*.9,0,x,H*.9,H*.3);
+      g.addColorStop(0,'rgba(255,170,110,.06)');g.addColorStop(1,'rgba(255,170,110,0)');cx.fillStyle=g;cx.fillRect(x-H*.3,H*.6,H*.6,H*.4)}
+    cx.restore();
+    for(const q of tubes){const tp=tfTip(q,t),w=Math.max(2,7*q.sc),dim=.45+.55*q.d;if(tp.h<2)continue;
+      cx.save();cx.globalAlpha=a*dim;
+      cx.lineCap='round';cx.strokeStyle='#ebe5d6';cx.lineWidth=w;cx.beginPath();cx.moveTo(q.x,q.y);
+      cx.quadraticCurveTo(q.x,(q.y+tp.y)/2,tp.x,tp.y);cx.stroke();
+      cx.strokeStyle='rgba(150,135,115,.45)';cx.lineWidth=1;cx.stroke();
+      cx.strokeStyle='rgba(170,155,135,.5)';cx.beginPath();
+      for(let k=1;k<6;k++){const f=k/6,x=q.x+(tp.x-q.x)*f*f,y=q.y+(tp.y-q.y)*f;cx.moveTo(x-w*.5,y);cx.lineTo(x+w*.5,y-1)}cx.stroke();
+      cx.fillStyle='#4a3a32';cx.beginPath();cx.ellipse(tp.x,tp.y,w*.55,w*.25,0,0,TAU);cx.fill();
+      const o=q.out;
+      if(o>.05){const R=13*q.sc*o;
+        const g=cx.createRadialGradient(tp.x,tp.y-R*.6,1,tp.x,tp.y-R*.5,R*1.2);g.addColorStop(0,'#ff6a6e');g.addColorStop(1,'#b8122a');
+        cx.fillStyle=g;cx.beginPath();cx.ellipse(tp.x,tp.y-R*.65,R*.62,R*.95,Math.sin(t*1.1+q.ph)*.12,0,TAU);cx.fill();
+        cx.strokeStyle='rgba(255,170,170,.55)';cx.lineWidth=1;cx.beginPath();
+        for(let k=0;k<5;k++){const yy=tp.y-R*(.2+k*.3);cx.moveTo(tp.x-R*.5,yy);cx.quadraticCurveTo(tp.x,yy-R*.12,tp.x+R*.5,yy)}cx.stroke()}
+      cx.restore()}
+    if(tfFish){const f=tfFish,L=48*vScale(),sw=Math.sin(f.ph*(f.dart>0?18:6));
+      cx.save();cx.translate(f.x,f.y);cx.scale(f.d,1);
+      const g=cx.createLinearGradient(0,-L*.15,0,L*.15);g.addColorStop(0,'#f6dcd8');g.addColorStop(1,'#d8a8a4');
+      cx.fillStyle=g;cx.beginPath();cx.moveTo(L*.5,0);cx.quadraticCurveTo(L*.4,-L*.17,L*.1,-L*.14);
+      cx.quadraticCurveTo(-L*.4,-L*.07+sw*L*.03,-L*.75,sw*L*.06);cx.quadraticCurveTo(-L*.4,L*.07+sw*L*.03,L*.1,L*.14);cx.quadraticCurveTo(L*.4,L*.17,L*.5,0);cx.fill();
+      cx.fillStyle='#2a1a1c';cx.beginPath();cx.arc(L*.36,-L*.05,L*.03,0,TAU);cx.fill();cx.restore()}
+    for(const c of tfCrabs)drawCrab(c);
+    cx.restore();
+  },
+  end(){tubes=[];tfCrabs=[];tfFish=null},
+  msg(n){return'<b>'+n+' 本</b>のチューブワームが引っこみました。赤いえらが、またゆっくり森いっぱいに開いていきます'}
+};
 function phroRelease(k){
   const p=phro;if(!p)return;
   for(let i=0;i<k&&p.inside>0&&p.babies.length<12;i++){p.inside--;
@@ -3572,7 +3664,7 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 update();
-if(finTest){score=500;lastLevel=level();seqI=SEQ.length;update();hintGone=true;$('hint').style.opacity=0;setTimeout(()=>startEvent('finale'),700)}
+if(finTest){score=500;lastLevel=level();seqI=SEQ.indexOf(PREVIEW[0])+1;update();hintGone=true;$('hint').style.opacity=0;setTimeout(()=>startEvent(PREVIEW[0]),700)}
 else if(volc)setTimeout(()=>showToast('<b>海底火山へ</b>赤く光る海の底。熱水と、ようがんと、ふしぎな生き物たちの世界へ',4000),800);
 else if(seaN()>0)setTimeout(()=>{if(!evt&&!paused)showToast('<b>'+SEANAMES[seaN()]+'</b>'+(seaN()+1)+' つめの海。深くもぐると、ここだけの生き物たちに会えます',3200)},1200);
 requestAnimationFrame(frame);
