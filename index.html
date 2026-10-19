@@ -234,7 +234,7 @@ function curCrea(){return volc?CREA6:CREAS[seaN()]}
 let crTap=0;
 function tapOpen(hold){if(crTap<=0)return 0;return Math.min(1,crTap/.18)*(crTap>hold?Math.max(0,1-(crTap-hold)/.35):1)}
 /* creatures met only during the milestone events */
-const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage','harimushi','harp'];
+const EXTRA=['kujira','yakochu','ebi','ika','deme','umiyuri','blob','hoya','honekui','nuta','tube','kani','chin','nishiki','okiami','hibari','yokoebi','kudakurage','harimushi','harp','spaghetti'];
 const ZTOTAL=ALLC.length+EXTRA.length;
 let met=[];try{met=JSON.parse(localStorage.getItem('awa-met')||'[]')}catch(e){}
 let cr=null,crT=5,pops=[],returns=0,finE=null;
@@ -2662,7 +2662,31 @@ NAMES.phro='オオタルマワシ';
 /* ---- チューブワームの森 (4th sea): white tubes crowd the seep around the lake, each crowned
    with a red plume. Touch them and they snap in, the wave rippling through the forest.
    Crabs climb the tubes, and a pale fish threads between them. ---- */
-let tubes=[],tfCrabs=[],tfFish=null;
+let tubes=[],tfCrabs=[],tfFish=null,spags=[];
+/* spaghetti worms (an acorn-worm, found draped over the rocks of the first vents discovered):
+   they lie in loose loops, or curl up into a tight spiral when touched */
+function spagPts(w,t){
+  const N=40,pts=[],c=ease(w.c);
+  for(let i=0;i<=N;i++){const f=i/N;
+    const lx=w.x+(f-.5)*w.L,ly=w.y+Math.sin(f*w.k+w.ph+t*.3)*w.L*.08+Math.sin(f*17+w.ph)*2;
+    const a=f*Math.PI*2*w.turns+w.ph,r=w.L*.11*(1-f*.85)+2,sx=w.x+Math.cos(a)*r,sy=w.y-w.L*.05+Math.sin(a)*r*.75;
+    pts.push([lx+(sx-lx)*c,ly+(sy-ly)*c])}
+  return pts;
+}
+function drawSpag(w,t){
+  const p=spagPts(w,t),vs=vScale(),sw=w.L*.035+2;
+  cx.lineCap='round';cx.lineJoin='round';
+  cx.strokeStyle='rgba(60,40,30,.35)';cx.lineWidth=sw+3;cx.beginPath();p.forEach(([x,y],i)=>i?cx.lineTo(x,y+3):cx.moveTo(x,y+3));cx.stroke();
+  cx.strokeStyle='#f0dcae';cx.lineWidth=sw;cx.beginPath();p.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.stroke();
+  cx.strokeStyle='rgba(200,150,90,.55)';cx.lineWidth=1;cx.setLineDash([3*vs,5*vs]);cx.stroke();cx.setLineDash([]);
+  cx.strokeStyle='rgba(255,250,235,.55)';cx.lineWidth=Math.max(1,sw*.25);cx.beginPath();p.forEach(([x,y],i)=>i?cx.lineTo(x-sw*.2,y-sw*.25):cx.moveTo(x-sw*.2,y-sw*.25));cx.stroke();
+  const [hx,hy]=p[p.length-1],[qx,qy]=p[p.length-3],an=Math.atan2(hy-qy,hx-qx);   // the "acorn" head
+  cx.save();cx.translate(hx,hy);cx.rotate(an);
+  cx.fillStyle='#f4b07a';cx.beginPath();cx.ellipse(sw*.6,0,sw*1.1,sw*.75,0,0,TAU);cx.fill();
+  cx.fillStyle='#e9d2a4';cx.beginPath();cx.ellipse(-sw*.3,0,sw*.55,sw*.8,0,0,TAU);cx.fill();cx.restore();
+  if(w.glow>0){cx.save();cx.globalCompositeOperation='lighter';cx.strokeStyle=`rgba(255,230,170,${.35*w.glow})`;cx.lineWidth=sw*3;
+    cx.beginPath();p.forEach(([x,y],i)=>i?cx.lineTo(x,y):cx.moveTo(x,y));cx.stroke();cx.restore()}
+}
 NAMES.tubef='チューブワームの森';
 
 /* ---- ハープ海綿 (5th sea): carnivorous sponges shaped like harps stand on the mud.
@@ -2772,11 +2796,17 @@ EV.tubef={len:26,lb:['ひっこめた','本'],bubbles:true,
       tubes.push({x:W*(-.02+Math.random()*1.04),d,sc,y:H*(.8+d*.16),h:H*(.16+Math.random()*.2)*(.65+d*.45),ph:Math.random()*6,
         lean:(Math.random()-.5)*.3,out:0,hideAt:-1,back:1.2+Math.random()*2,grow:.3+Math.random()*1.4})}
     tubes.sort((a,b)=>a.d-b.d);evt.cT=4;evt.fT=7;
+    spags=[];const sn=W<500?3:4;
+    for(let i=0;i<sn;i++){const L=Math.min(W*.46,210)*vScale()*(.85+Math.random()*.3);
+      spags.push({x:W*(i+.5)/sn+(Math.random()-.5)*20,y:H*(.83+(i%2)*.04),L,k:6+Math.random()*4,ph:Math.random()*6,turns:2.2+Math.random()*.8,
+        c:0,ct:0,cd:0,auto:4+Math.random()*6,glow:0})}
     const first=meet('harimushi');rumble();
     showToast('<b>チューブワームの森'+(first?'<br>はじめまして！':'')+'</b>海の底からしみ出す水のまわりに、白い管がびっしり。赤いえらのチューブワームには、口もおなかもありません。体の中の細菌から栄養をもらいます。ふれると、しゅっと引っこみます',5200);
   },
   step(dt){
     const e=evt,now=e.t,fin=now>e.len-2.5,t=performance.now()/1000;
+    for(const w of spags){w.cd-=dt;w.glow=Math.max(0,w.glow-dt*.7);w.c+=(w.ct-w.c)*Math.min(1,dt*1.1);
+      w.auto-=dt;if(w.auto<=0){w.auto=6+Math.random()*6;w.ct=w.ct?0:(Math.random()<.4?1:0)}}
     for(const q of tubes){const hid=fin||now<q.grow+.8||(now>=q.hideAt&&now<q.back);
       q.out+=((hid?0:1)-q.out)*Math.min(1,dt*(hid?20:1.8))}
     e.cT-=dt;
@@ -2801,6 +2831,12 @@ EV.tubef={len:26,lb:['ひっこめた','本'],bubbles:true,
     for(const c of tfCrabs){if(c.st==='fall')continue;
       if((px-c.x)**2+(py-c.y)**2<=(c.s*2+18)**2){c.st='fall';c.vx=(Math.random()-.5)*120;c.vy=-120;score+=2;
         pops.push({x:c.x,y:c.y-22,life:.9,txt:'ぽろっ +2',col:'#fff2e6'});blip();update();return true}}
+    for(const w of spags){const p=spagPts(w,t);if(!p.some(([x,y])=>(x-px)**2+(y-py)**2<26*26))continue;
+      if(w.cd<=0){w.cd=1;w.ct=w.ct>.5?0:1;w.glow=1;w.auto=8+Math.random()*4;score+=2;
+        pops.push({x:px,y:py-28,life:.9,txt:(w.ct?'くるくる':'にょろ〜')+' +2',col:'#ffe6b0'});chime(w.ct?587:440);
+        if(meet('spaghetti'))showToast('<b>スパゲッティワーム<br>はじめまして！</b>ギボシムシのなかま。熱水の岩の上に、ゆでたスパゲッティのようにからまっています。チューブワームといっしょに、はじめて見つかった生き物のひとつです',4600);
+        update()}
+      return true}
     if(tfFish&&(px-tfFish.x)**2+(py-tfFish.y)**2<=46**2&&tfFish.dart<=0){tfFish.dart=1.5;score+=2;
       pops.push({x:tfFish.x,y:tfFish.y-24,life:.9,txt:'にゅるっ +2',col:'#ffe0e6'});noise(.2,'bandpass',900,.15);update();return true}
     let near=false;for(const q of tubes){const tp=tfTip(q,t);if((px-tp.x)**2+(py-tp.y)**2<(30*q.sc+22)**2){near=true;break}}
@@ -2840,10 +2876,11 @@ EV.tubef={len:26,lb:['ひっこめた','本'],bubbles:true,
       cx.fillStyle=g;cx.beginPath();cx.moveTo(L*.5,0);cx.quadraticCurveTo(L*.4,-L*.17,L*.1,-L*.14);
       cx.quadraticCurveTo(-L*.4,-L*.07+sw*L*.03,-L*.75,sw*L*.06);cx.quadraticCurveTo(-L*.4,L*.07+sw*L*.03,L*.1,L*.14);cx.quadraticCurveTo(L*.4,L*.17,L*.5,0);cx.fill();
       cx.fillStyle='#2a1a1c';cx.beginPath();cx.arc(L*.36,-L*.05,L*.03,0,TAU);cx.fill();cx.restore()}
+    for(const w of spags)drawSpag(w,t);
     for(const c of tfCrabs)drawCrab(c);
     cx.restore();
   },
-  end(){tubes=[];tfCrabs=[];tfFish=null},
+  end(){tubes=[];tfCrabs=[];tfFish=null;spags=[]},
   msg(n){return'<b>'+n+' 本</b>のチューブワームが引っこみました。赤いえらが、またゆっくり森いっぱいに開いていきます'}
 };
 function phroRelease(k){
