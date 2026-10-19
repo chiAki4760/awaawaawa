@@ -222,8 +222,9 @@ const CREA6=[
 const ALLC=[].concat(...CREAS,CREA6);
 const VOLC_NEED=4000;
 let volc=false,total=0,volcOpen=false;
-try{total=+localStorage.getItem('awa-total')||0;volcOpen=localStorage.getItem('awa-volc')==='1'}catch(e){}
-if(location.hash==='#kazan'){volcOpen=true;volc=true}   // for trying it out: index.html#kazan
+try{total=+localStorage.getItem('awa-total')||0}catch(e){}
+function volcReady(){return returns>=5&&total>=VOLC_NEED}   // both: 5 seas visited AND 4000 points in all
+let kazanTest=location.hash==='#kazan';if(kazanTest){volc=true}   // for trying it out: index.html#kazan
 const SEANAMES=['はじまりの海','こわい顔の海','凍える南極の海','海の底の湖','いちばん深い海溝'];
 function seaN(){return((returns%5)+5)%5}
 function seaB(){return seaN()===1}
@@ -2844,6 +2845,7 @@ NAMES.finale='光のフィナーレ';
    ===================================================================== */
 const SEQV=['magma','vent','scaly','goemon','glow','magma','squid','treasure'];
 if(volc)SEQ=SEQV;
+volcOpen=kazanTest||volcReady();
 NAMES.magma='海底噴火';NAMES.scaly='よろいの巻貝';NAMES.goemon='ゴエモンの群れ';
 function evShake(e){return e&&e.shake>0?Math.sin(performance.now()/16)*e.shake*6:0}
 
@@ -3099,12 +3101,13 @@ function showEnd(){
   const fin=!volc&&seaN()===4;let opened=false;
   if(!volc){returns++;try{localStorage.setItem('awa-return',returns)}catch(e){}
     total+=score;try{localStorage.setItem('awa-total',total)}catch(e){}
-    if(!volcOpen&&total>=VOLC_NEED){volcOpen=opened=true;try{localStorage.setItem('awa-volc','1')}catch(e){}}}
+    if(!volcOpen&&volcReady()){volcOpen=opened=true}}
   $('endc').classList.toggle('hot',volc||opened);
-  $('eTot').innerHTML=volcOpen?'5つの海の合計 '+total+' 点':'5つの海の合計 '+total+' / '+VOLC_NEED+' 点<i><b id="eTotBar"></b></i>';
-  if(!volcOpen)setTimeout(()=>{const b=$('eTotBar');if(b)b.style.width=Math.min(100,total/VOLC_NEED*100)+'%'},80);
+  const seasDone=Math.min(5,returns);
+  $('eTot').innerHTML=volcOpen?'5つの海の合計 '+total+' 点':'海底火山への道<br>めぐった海 '+seasDone+' / 5'+(seasDone>=5?' ✓':'')+' ・ 合計 '+total+' / '+VOLC_NEED+' 点'+(total>=VOLC_NEED?' ✓':'')+'<i><b id="eTotBar"></b></i>';
+  if(!volcOpen)setTimeout(()=>{const b=$('eTotBar');if(b)b.style.width=Math.min(100,(Math.min(1,seasDone/5)+Math.min(1,total/VOLC_NEED))*50)+'%'},80);
   $('volcGo').hidden=!volcOpen;$('volcGo').textContent=volc?'もう一度、海底火山へ':'海底火山へもぐる';
-  $('again').textContent=volc?'ふつうの海へもどる':'もう一度もぐる';
+  $('again').textContent='次の海「'+SEANAMES[seaN()]+'」へもぐる';
   document.querySelector('#endc .t').textContent=fin?'5つの海をめぐりました':'おかえりなさい';document.querySelector('#endc .t').style.fontSize=fin?'22px':'';
   document.querySelector('#endc .s').innerHTML=fin?'はじまりの海から、いちばん深い海溝まで。<br>ぜんぶの海の旅が終わりました':'深海探査機に乗って、<br>海の上まで帰ってきました';
   $('eScore').textContent=score;$('eMet').textContent=met.length+' / '+ZTOTAL;$('eRet').textContent=returns+' 回目';$('eLet').textContent=Math.min(letters,LETTERS.length)+' / '+LETTERS.length;
@@ -3112,7 +3115,7 @@ function showEnd(){
   if(volc){document.querySelector('#endc .t').textContent='海底火山から帰還';document.querySelector('#endc .t').style.fontSize='24px';
     document.querySelector('#endc .s').innerHTML='赤く光る海の底から、<br>無事に帰ってきました';
     $('eNext').textContent='つぎのふつうの海は「'+SEANAMES[seaN()]+'」です'}
-  if(opened){$('eNext').innerHTML='<b style="color:#ffb27a">海の底が、赤く光っています…</b><br>5つの海の合計が '+VOLC_NEED+' 点をこえて、海底火山への道がひらきました！';
+  if(opened){$('eNext').innerHTML='<b style="color:#ffb27a">海の底が、赤く光っています…</b><br>5つの海をすべてめぐり、合計 '+VOLC_NEED+' 点をこえました。海底火山への道がひらきました！';
     rumble();setTimeout(rumble,500)}
   $('endc').classList.add('show');happy();
 }
@@ -3216,7 +3219,7 @@ function rClose(){$('resetc').classList.remove('show');paused=rWasPaused;if(!pau
 function rAsk(kind){rKind=kind;$('rChoose').hidden=true;$('rConfirm').hidden=false;
   $('rMsg').innerHTML=kind==='best'?'最高記録を 0 にもどします。<br>図鑑や宝はそのままです':'最高記録・図鑑・集めた宝・帰還回数・手紙・合計点を<br>ぜんぶ消して、1 回目の海からやり直します。<br>もとにはもどせません'}
 function rDo(){
-  const keys=rKind==='best'?['awa-best']:['awa-best','awa-met','awa-takara','awa-return','awa-letters','awa-total','awa-volc'];
+  const keys=rKind==='best'?['awa-best']:['awa-best','awa-met','awa-takara','awa-return','awa-letters','awa-total'];
   for(const k of keys){try{localStorage.removeItem(k)}catch(e){}}
   best=0;
   if(rKind==='all'){met=[];takara=0;returns=0;letters=0;bottle=null;total=0;volcOpen=false;volc=false;showMet();$('resetc').classList.remove('show');paused=false;$('pause').textContent='ひと休み';
